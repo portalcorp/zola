@@ -1,5 +1,8 @@
 import type { Provider, SupportedModel } from "./types"
 
+// Cache for dynamically resolved providers
+const dynamicProviderCache = new Map<string, Provider>()
+
 // map each model ID to its provider
 const MODEL_PROVIDER_MAP: Record<string, Provider> = {
   o1: "openai",
@@ -150,19 +153,80 @@ function isOllamaModel(modelId: string): boolean {
   return ollamaPatterns.some((pattern) => pattern.test(modelId))
 }
 
+// Try to determine provider from model ID patterns
+function guessProviderFromModelId(modelId: string): Provider | null {
+  const lowerModel = modelId.toLowerCase()
+  
+  // OpenAI patterns
+  if (lowerModel.startsWith("gpt-") || lowerModel.startsWith("o1") || lowerModel.startsWith("o3") || lowerModel.startsWith("chatgpt")) {
+    return "openai"
+  }
+  
+  // Anthropic patterns
+  if (lowerModel.startsWith("claude-")) {
+    return "anthropic"
+  }
+  
+  // Google/Gemini patterns
+  if (lowerModel.startsWith("gemini-") || lowerModel.startsWith("gemma-") || lowerModel.startsWith("learnlm-")) {
+    return "google"
+  }
+  
+  // Mistral patterns
+  if (lowerModel.startsWith("mistral-") || lowerModel.startsWith("mixtral-") || lowerModel.startsWith("ministral-") || lowerModel.startsWith("pixtral-")) {
+    return "mistral"
+  }
+  
+  // XAI patterns
+  if (lowerModel.startsWith("grok-")) {
+    return "xai"
+  }
+  
+  // Perplexity patterns
+  if (lowerModel.startsWith("sonar")) {
+    return "perplexity"
+  }
+  
+  // DeepSeek patterns
+  if (lowerModel.startsWith("deepseek-")) {
+    return "deepseek"
+  }
+  
+  return null
+}
+
 export function getProviderForModel(model: SupportedModel): Provider {
   if (model.startsWith("openrouter:")) {
     return "openrouter"
   }
 
-  // First check the static mapping
+  // Check dynamic cache first
+  if (dynamicProviderCache.has(model)) {
+    return dynamicProviderCache.get(model)!
+  }
+
+  // Check the static mapping
   const provider = MODEL_PROVIDER_MAP[model]
-  if (provider) return provider
+  if (provider) {
+    dynamicProviderCache.set(model, provider)
+    return provider
+  }
 
   // If not found in static mapping, check if it looks like an Ollama model
   if (isOllamaModel(model)) {
+    dynamicProviderCache.set(model, "ollama")
     return "ollama"
   }
 
-  throw new Error(`Unknown provider for model: ${model}`)
+  // Try to guess the provider from the model ID
+  const guessedProvider = guessProviderFromModelId(model)
+  if (guessedProvider) {
+    dynamicProviderCache.set(model, guessedProvider)
+    return guessedProvider
+  }
+
+  // Default fallback - try OpenRouter for unknown models
+  console.warn(`Unknown provider for model: ${model}, defaulting to OpenRouter`)
+  dynamicProviderCache.set(model, "openrouter")
+  return "openrouter"
 }

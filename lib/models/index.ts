@@ -8,9 +8,10 @@ import { getOllamaModels, ollamaModels } from "./data/ollama"
 import { openaiModels } from "./data/openai"
 import { openrouterModels } from "./data/openrouter"
 import { perplexityModels } from "./data/perplexity"
+import { fetchModelsFromModelsDev } from "./models-dev-fetcher"
 import { ModelConfig } from "./types"
 
-// Static models (always available)
+// Static models (always available) - kept as fallback
 const STATIC_MODELS: ModelConfig[] = [
   ...openaiModels,
   ...mistralModels,
@@ -25,6 +26,7 @@ const STATIC_MODELS: ModelConfig[] = [
 
 // Dynamic models cache
 let dynamicModelsCache: ModelConfig[] | null = null
+let modelsDevCache: ModelConfig[] | null = null
 let lastFetchTime = 0
 const CACHE_DURATION = 5 * 60 * 1000 // 5 minutes
 
@@ -38,16 +40,47 @@ export async function getAllModels(): Promise<ModelConfig[]> {
   }
 
   try {
-    // Get dynamically detected Ollama models (includes enabled check internally)
-    const detectedOllamaModels = await getOllamaModels()
+    // Fetch models from multiple sources in parallel
+    const [modelsDevModels, detectedOllamaModels] = await Promise.all([
+      // Fetch from models.dev API
+      fetchModelsFromModelsDev().catch((error) => {
+        console.warn("Failed to fetch from models.dev, using static models:", error)
+        return []
+      }),
+      // Get dynamically detected Ollama models (includes enabled check internally)
+      getOllamaModels().catch((error) => {
+        console.warn("Failed to detect Ollama models:", error)
+        return []
+      })
+    ])
 
-    // Combine static models (excluding static Ollama models) with detected ones
-    const staticModelsWithoutOllama = STATIC_MODELS.filter(
-      (model) => model.providerId !== "ollama"
-    )
+    // Store models.dev cache
+    modelsDevCache = modelsDevModels
 
-    dynamicModelsCache = [...staticModelsWithoutOllama, ...detectedOllamaModels]
+    // Create a map to deduplicate models by ID
+    const modelMap = new Map<string, ModelConfig>()
 
+    // Priority order: models.dev > static models > ollama
+    // First add models from models.dev
+    for (const model of modelsDevModels) {
+      modelMap.set(model.id, model)
+    }
+
+    // Then add static models (won't override models.dev entries)
+    for (const model of STATIC_MODELS) {
+      if (!modelMap.has(model.id) && model.providerId !== "ollama") {
+        modelMap.set(model.id, model)
+      }
+    }
+
+    // Finally add Ollama models
+    for (const model of detectedOllamaModels) {
+      if (!modelMap.has(model.id)) {
+        modelMap.set(model.id, model)
+      }
+    }
+
+    dynamicModelsCache = Array.from(modelMap.values())
     lastFetchTime = now
     return dynamicModelsCache
   } catch (error) {
@@ -110,9 +143,15 @@ export async function getModelsForUserProviders(
 // Synchronous function to get model info for simple lookups
 // This uses cached data if available, otherwise falls back to static models
 export function getModelInfo(modelId: string): ModelConfig | undefined {
-  // First check the cache if it exists
+  // First check the dynamic cache if it exists
   if (dynamicModelsCache) {
     return dynamicModelsCache.find((model) => model.id === modelId)
+  }
+
+  // Then check models.dev cache
+  if (modelsDevCache) {
+    const modelsDevModel = modelsDevCache.find((model) => model.id === modelId)
+    if (modelsDevModel) return modelsDevModel
   }
 
   // Fall back to static models for immediate lookup

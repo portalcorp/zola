@@ -66,6 +66,60 @@ const createOllamaProvider = () => {
   })
 }
 
+// Create OpenRouter provider instance
+const createOpenRouterProvider = (apiKey?: string) => {
+  return createOpenAI({
+    baseURL: "https://openrouter.ai/api/v1",
+    apiKey: apiKey || process.env.OPENROUTER_API_KEY || "",
+    name: "openrouter",
+  })
+}
+
+// Create a generic provider using OpenRouter as a gateway
+// This allows us to support any provider that OpenRouter supports
+const createGenericProvider = (providerId: string, apiKey?: string) => {
+  // Try to get API key from environment using the provider ID
+  const envKey = process.env[`${providerId.toUpperCase()}_API_KEY`]
+  
+  // Use OpenRouter as a fallback gateway for unknown providers
+  return createOpenAI({
+    baseURL: "https://openrouter.ai/api/v1",
+    apiKey: apiKey || envKey || process.env.OPENROUTER_API_KEY || "",
+    name: providerId,
+    headers: {
+      "HTTP-Referer": process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
+      "X-Title": "Zola AI Chat",
+    }
+  })
+}
+
+// Map of provider IDs to their API base URLs (for providers with known endpoints)
+const PROVIDER_ENDPOINTS: Record<string, string> = {
+  deepseek: "https://api.deepseek.com/v1",
+  together: "https://api.together.xyz/v1",
+  groq: "https://api.groq.com/openai/v1",
+  fireworks: "https://api.fireworks.ai/inference/v1",
+  // Add more as needed - these use OpenAI-compatible APIs
+}
+
+// Create provider with known endpoint or fall back to OpenRouter
+const createDynamicProvider = (providerId: string, apiKey?: string) => {
+  const baseURL = PROVIDER_ENDPOINTS[providerId]
+  const envKey = process.env[`${providerId.toUpperCase()}_API_KEY`]
+  
+  if (baseURL) {
+    // Provider has a known direct endpoint
+    return createOpenAI({
+      baseURL,
+      apiKey: apiKey || envKey || "",
+      name: providerId,
+    })
+  } else {
+    // Fall back to OpenRouter for unknown providers
+    return createGenericProvider(providerId, apiKey)
+  }
+}
+
 export function openproviders<T extends SupportedModel>(
   modelId: T,
   settings?: OpenProvidersOptions<T>,
@@ -156,5 +210,22 @@ export function openproviders<T extends SupportedModel>(
     )
   }
 
-  throw new Error(`Unsupported model: ${modelId}`)
+  if (provider === "openrouter") {
+    const openrouterProvider = createOpenRouterProvider(apiKey)
+    // Strip the "openrouter:" prefix if present
+    const actualModelId = modelId.startsWith("openrouter:") 
+      ? modelId.slice("openrouter:".length) 
+      : modelId
+    return openrouterProvider(
+      actualModelId as string,
+      settings as OpenAIChatSettings
+    )
+  }
+
+  // Handle any other provider dynamically
+  const dynamicProvider = createDynamicProvider(provider, apiKey)
+  return dynamicProvider(
+    modelId as string,
+    settings as OpenAIChatSettings
+  )
 }

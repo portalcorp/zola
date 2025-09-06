@@ -24,6 +24,10 @@ export const FREE_MODELS_IDS = [
   "gpt-4.1-nano",
 ]
 
+// export const RECOMMENDED_MODELS_IDS = [
+//   "
+// ]
+
 export const MODEL_DEFAULT = "gpt-4.1-nano"
 
 export const APP_NAME = "Zola"

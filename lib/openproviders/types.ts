@@ -127,7 +127,8 @@ export type StaticOllamaModel = "llama3.2:latest" | "qwen2.5-coder:latest"
 // Dynamic Ollama model type - allows any string for auto-detected models
 export type OllamaModel = StaticOllamaModel | (string & {})
 
-export type Provider =
+// Known providers with direct SDK support
+export type KnownProvider =
   | "openai"
   | "mistral"
   | "perplexity"
@@ -136,6 +137,9 @@ export type Provider =
   | "xai"
   | "ollama"
   | "openrouter"
+
+// Provider type that allows any string but provides autocomplete for known providers
+export type Provider = KnownProvider | (string & {})
 
 export type SupportedModel =
   | OpenAIModel

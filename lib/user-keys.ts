@@ -39,7 +39,9 @@ export async function getEffectiveApiKey(
     if (userKey) return userKey
   }
 
-  const envKeyMap: Record<ProviderWithoutOllama, string | undefined> = {
+  // Try to get API key from environment dynamically
+  // First check if it's a known provider with a specific env var
+  const knownProviderKeys: Record<string, string | undefined> = {
     openai: env.OPENAI_API_KEY,
     mistral: env.MISTRAL_API_KEY,
     perplexity: env.PERPLEXITY_API_KEY,
@@ -49,5 +51,14 @@ export async function getEffectiveApiKey(
     openrouter: env.OPENROUTER_API_KEY,
   }
 
-  return envKeyMap[provider] || null
+  if (provider in knownProviderKeys) {
+    return knownProviderKeys[provider] || null
+  }
+
+  // For unknown providers, try to find an env var following the pattern PROVIDER_API_KEY
+  const envKey = process.env[`${provider.toUpperCase()}_API_KEY`]
+  if (envKey) return envKey
+
+  // Fall back to OpenRouter API key for unknown providers
+  return env.OPENROUTER_API_KEY || null
 }

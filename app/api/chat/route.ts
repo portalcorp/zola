@@ -4,6 +4,7 @@ import { getProviderForModel } from "@/lib/openproviders/provider-map"
 import type { ProviderWithoutOllama } from "@/lib/user-keys"
 import { Attachment } from "@ai-sdk/ui-utils"
 import { Message as MessageAISDK, streamText, ToolSet } from "ai"
+import { NextResponse } from "next/server"
 import {
   incrementMessageCount,
   logUserMessage,
@@ -89,8 +90,17 @@ export async function POST(req: Request) {
         undefined
     }
 
+    // Handle async apiSdk
+    const modelInstance = await Promise.resolve(
+      modelConfig.apiSdk(apiKey, { enableSearch })
+    )
+    
+    if (!modelInstance) {
+      return new NextResponse("Model SDK initialization failed", { status: 500 })
+    }
+
     const result = streamText({
-      model: modelConfig.apiSdk(apiKey, { enableSearch }),
+      model: modelInstance,
       system: effectiveSystemPrompt,
       messages: messages,
       tools: {} as ToolSet,
