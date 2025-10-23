@@ -4,7 +4,7 @@ export interface ModelsDevModel {
   id: string
   name: string
   attachment?: boolean
-  reasoning?: boolean
+  reasoningText?: boolean
   temperature?: boolean
   tool_call?: boolean
   knowledge?: string
@@ -69,7 +69,7 @@ function mapModelToConfig(
 
   // Build tags based on capabilities
   const tags: string[] = []
-  if (model.reasoning) tags.push("reasoning")
+  if (model.reasoningText) tags.push("reasoning")
   if (model.tool_call) tags.push("tools")
   if (model.attachment) tags.push("vision", "file-upload")
   if (model.open_weights) tags.push("open-source", "OSS")
@@ -91,7 +91,7 @@ function mapModelToConfig(
 
   // Determine intelligence level
   let intelligence: "Low" | "Medium" | "High" = "Medium"
-  if (model.reasoning) {
+  if (model.reasoningText) {
     intelligence = "High"
   } else if (model.name.toLowerCase().includes("mini") ||
              model.name.toLowerCase().includes("nano")) {
@@ -128,7 +128,7 @@ function mapModelToConfig(
     vision: model.attachment || model.modalities?.input?.includes("image"),
     tools: model.tool_call,
     audio: model.modalities?.input?.includes("audio"),
-    reasoning: model.reasoning,
+    reasoningText: model.reasoningText,
     openSource: model.open_weights,
     speed,
     intelligence,
@@ -136,7 +136,7 @@ function mapModelToConfig(
     releasedAt: model.release_date,
     icon: providerId,
     apiSdk: getApiSdk,
-  }
+  };
 }
 
 // Fetch models from models.dev API

@@ -39,6 +39,7 @@ function ResponseCard({ response, group }: ResponseCardProps) {
   const model = getModelInfo(response.model)
   const providerIcon = PROVIDERS.find((p) => p.id === model?.baseProviderId)
 
+  /* FIXME(@ai-sdk-upgrade-v5): The `experimental_attachments` property has been replaced with the parts array. Please manually migrate following https://ai-sdk.dev/docs/migration-guides/migration-guide-5-0#attachments--file-parts */
   return (
     <div className="relative">
       <div className="bg-background pointer-events-auto relative rounded border p-3">
@@ -91,7 +92,7 @@ function ResponseCard({ response, group }: ResponseCardProps) {
         )}
       </div>
     </div>
-  )
+  );
 }
 
 export function MultiModelConversation({
@@ -130,6 +131,7 @@ export function MultiModelConversation({
           {messageGroups.length === 0
             ? null
             : messageGroups.map((group, groupIndex) => {
+                /* FIXME(@ai-sdk-upgrade-v5): The `experimental_attachments` property has been replaced with the parts array. Please manually migrate following https://ai-sdk.dev/docs/migration-guides/migration-guide-5-0#attachments--file-parts */
                 return (
                   <div key={groupIndex} className="mb-10 w-full space-y-3">
                     <div className="mx-auto w-full max-w-3xl">
@@ -150,7 +152,6 @@ export function MultiModelConversation({
                         {group.userMessage.content}
                       </Message>
                     </div>
-
                     <div
                       className={cn(
                         "mx-auto w-full",
@@ -182,7 +183,7 @@ export function MultiModelConversation({
                       </div>
                     </div>
                   </div>
-                )
+                );
               })}
           <div className="absolute right-0 bottom-32 flex w-full max-w-3xl flex-1 items-end justify-end gap-4 pb-2 pl-6">
             <ScrollButton className="absolute top-[-50px] right-[30px]" />
@@ -190,5 +191,5 @@ export function MultiModelConversation({
         </ChatContainerContent>
       </ChatContainerRoot>
     </div>
-  )
+  );
 }

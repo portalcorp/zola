@@ -1,4 +1,4 @@
-import { LanguageModelV1 } from "ai"
+import { LanguageModelV2 } from '@ai-sdk/provider'
 
 type ModelConfig = {
   id: string // "gpt-4.1-nano" // same from AI SDKs
@@ -19,7 +19,7 @@ type ModelConfig = {
   vision?: boolean
   tools?: boolean
   audio?: boolean
-  reasoning?: boolean
+  reasoningText?: boolean
   webSearch?: boolean
   openSource?: boolean
 

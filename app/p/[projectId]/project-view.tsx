@@ -14,7 +14,7 @@ import { Attachment } from "@/lib/file-handling"
 import { API_ROUTE_CHAT } from "@/lib/routes"
 import { useUser } from "@/lib/user-store/provider"
 import { cn } from "@/lib/utils"
-import { useChat } from "@ai-sdk/react"
+import { useChat, DefaultChatTransport } from "@ai-sdk/react";
 import { ChatCircleIcon } from "@phosphor-icons/react"
 import { useQuery } from "@tanstack/react-query"
 import { AnimatePresence, motion } from "motion/react"
@@ -85,21 +85,25 @@ export function ProjectView({ projectId }: ProjectViewProps) {
     })
   }, [])
 
+  const [input, setInput] = useState('');
+
   const {
     messages,
-    input,
     handleSubmit,
     status,
     reload,
     stop,
     setMessages,
-    setInput,
+    setInput
   } = useChat({
     id: `project-${projectId}-${currentChatId}`,
-    api: API_ROUTE_CHAT,
     initialMessages: [],
     onFinish: cacheAndAddMessage,
     onError: handleError,
+
+    transport: new DefaultChatTransport({
+      api: API_ROUTE_CHAT
+    })
   })
 
   const { selectedModel, handleModelChange } = useModel({

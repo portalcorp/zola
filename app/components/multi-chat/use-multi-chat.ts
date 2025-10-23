@@ -1,7 +1,7 @@
 // todo: fix this
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { toast } from "@/components/ui/toast"
-import { useChat } from "@ai-sdk/react"
+import { useChat, DefaultChatTransport } from "@ai-sdk/react";
 import { useMemo } from "react"
 
 type ModelConfig = {
@@ -27,7 +27,6 @@ export function useMultiChat(models: ModelConfig[]): ModelChat[] {
     // todo: fix this
     // eslint-disable-next-line react-hooks/rules-of-hooks
     useChat({
-      api: "/api/chat",
       onError: (error) => {
         const model = models[index]
         if (model) {
@@ -39,6 +38,10 @@ export function useMultiChat(models: ModelConfig[]): ModelChat[] {
           })
         }
       },
+
+      transport: new DefaultChatTransport({
+        api: "/api/chat"
+      })
     })
   )
 

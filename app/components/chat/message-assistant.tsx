@@ -99,9 +99,9 @@ export function MessageAssistant({
         )}
         {...(isQuoteEnabled && { "data-message-id": messageId })}
       >
-        {reasoningParts && reasoningParts.reasoning && (
+        {reasoningParts && reasoningParts.reasoningText && (
           <Reasoning
-            reasoning={reasoningParts.reasoning}
+            reasoning={reasoningParts.reasoningText}
             isStreaming={status === "streaming"}
           />
         )}
@@ -182,5 +182,5 @@ export function MessageAssistant({
         )}
       </div>
     </Message>
-  )
+  );
 }

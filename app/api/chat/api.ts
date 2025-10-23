@@ -82,6 +82,7 @@ export async function logUserMessage({
 }: LogUserMessageParams): Promise<void> {
   if (!supabase) return
 
+  /* FIXME(@ai-sdk-upgrade-v5): The `experimental_attachments` property has been replaced with the parts array. Please manually migrate following https://ai-sdk.dev/docs/migration-guides/migration-guide-5-0#attachments--file-parts */
   const { error } = await supabase.from("messages").insert({
     chat_id: chatId,
     role: "user",
@@ -89,7 +90,7 @@ export async function logUserMessage({
     experimental_attachments: attachments,
     user_id: userId,
     message_group_id,
-  })
+  });
 
   if (error) {
     console.error("Error saving user message:", error)

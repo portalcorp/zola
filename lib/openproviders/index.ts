@@ -51,10 +51,7 @@ const getOllamaBaseURL = () => {
   }
 
   // Server-side: check environment variables
-  return (
-    process.env.OLLAMA_BASE_URL?.replace(/\/+$/, "") + "/v1" ||
-    "http://localhost:11434/v1"
-  )
+  return (process.env.OLLAMA_BASE_URL?.replace(/\/+$/, "") + "/v1" || "http://localhost:11434/v1");
 }
 
 // Create Ollama provider instance with configurable baseURL
@@ -130,8 +127,7 @@ export function openproviders<T extends SupportedModel>(
   if (provider === "openai") {
     if (apiKey) {
       const openaiProvider = createOpenAI({
-        apiKey,
-        compatibility: "strict",
+        apiKey
       })
       return openaiProvider(
         modelId as OpenAIModel,

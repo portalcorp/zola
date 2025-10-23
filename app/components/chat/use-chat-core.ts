@@ -5,7 +5,7 @@ import { MESSAGE_MAX_LENGTH, SYSTEM_PROMPT_DEFAULT } from "@/lib/config"
 import { Attachment } from "@/lib/file-handling"
 import { API_ROUTE_CHAT } from "@/lib/routes"
 import type { UserProfile } from "@/lib/user/types"
-import type { Message } from "@ai-sdk/react"
+import type { Message, DefaultChatTransport } from "@ai-sdk/react";
 import { useChat } from "@ai-sdk/react"
 import { useSearchParams } from "next/navigation"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
@@ -84,10 +84,11 @@ export function useChatCore({
     })
   }, [])
 
+  const [input, setInput] = useState('');
+
   // Initialize useChat
   const {
     messages,
-    input,
     handleSubmit,
     status,
     error,
@@ -95,13 +96,16 @@ export function useChatCore({
     stop,
     setMessages,
     setInput,
-    append,
+    append
   } = useChat({
-    api: API_ROUTE_CHAT,
     initialMessages,
     initialInput: draftValue,
     onFinish: cacheAndAddMessage,
     onError: handleError,
+
+    transport: new DefaultChatTransport({
+      api: API_ROUTE_CHAT
+    })
   })
 
   // Handle search params on mount
