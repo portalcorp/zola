@@ -2,7 +2,7 @@ import { SYSTEM_PROMPT_DEFAULT } from "@/lib/config"
 import { getAllModels } from "@/lib/models"
 import { getProviderForModel } from "@/lib/openproviders/provider-map"
 import type { ProviderWithoutOllama } from "@/lib/user-keys"
-import { UIMessage as MessageAISDK, streamText, ToolSet, stepCountIs } from "ai"
+import { UIMessage as MessageAISDK, streamText, ToolSet, stepCountIs, convertToModelMessages } from "ai"
 import type { Attachment } from 'ai-legacy'
 import { NextResponse } from "next/server"
 import {
@@ -16,7 +16,7 @@ import { createErrorResponse, extractErrorMessage } from "./utils"
 export const maxDuration = 60
 
 type ChatRequest = {
-  messages: undefined[]
+  messages: MessageAISDK[]
   chatId: string
   userId: string
   model: string
@@ -60,17 +60,28 @@ export async function POST(req: Request) {
     const userMessage = messages[messages.length - 1]
 
     if (supabase && userMessage?.role === "user") {
-      /* FIXME(@ai-sdk-upgrade-v5): The `experimental_attachments` property has been replaced with the parts array. Please manually migrate following https://ai-sdk.dev/docs/migration-guides/migration-guide-5-0#attachments--file-parts */
+      // Extract text content from parts array for logging
+      const textParts = userMessage.parts?.filter(part => part.type === "text") || []
+      const content = textParts.map(part => (part as any).text || "").join("\n")
+      
+      // Extract file attachments from parts array
+      const fileParts = userMessage.parts?.filter(part => part.type === "file") || []
+      const attachments = fileParts.map(part => ({
+        name: (part as any).name || "file",
+        contentType: (part as any).mediaType || "application/octet-stream",
+        url: (part as any).url || "",
+      })) as Attachment[]
+      
       await logUserMessage({
         supabase,
         userId,
         chatId,
-        content: userMessage.content,
-        attachments: userMessage.experimental_attachments as Attachment[],
+        content,
+        attachments,
         model,
         isAuthenticated,
         message_group_id,
-      });
+      })
     }
 
     const allModels = await getAllModels()
@@ -103,7 +114,7 @@ export async function POST(req: Request) {
     const result = streamText({
       model: modelInstance,
       system: effectiveSystemPrompt,
-      messages: messages,
+      messages: convertToModelMessages(messages),
       tools: {} as ToolSet,
       stopWhen: stepCountIs(10),
 

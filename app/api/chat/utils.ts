@@ -6,9 +6,9 @@ import { UIMessage as MessageAISDK } from "ai"
  * to prevent OpenAI API errors.
  */
 export function cleanMessagesForTools(
-  messages: undefined[],
+  messages: MessageAISDK[],
   hasTools: boolean
-): undefined[] {
+): MessageAISDK[] {
   if (hasTools) {
     return messages
   }
@@ -23,90 +23,50 @@ export function cleanMessagesForTools(
       }
 
       if (message.role === "assistant") {
-        const cleanedMessage: undefined = { ...message }
+        const cleanedMessage: MessageAISDK = { ...message }
 
-        if (message.toolInvocations && message.toolInvocations.length > 0) {
-          delete cleanedMessage.toolInvocations
-        }
-
-        if (Array.isArray(message.content)) {
-          const filteredContent = (
-            message.content as Array<{ type?: string; text?: string }>
-          ).filter((part: { type?: string }) => {
-            if (part && typeof part === "object" && part.type) {
-              // Remove tool-call, tool-result, and tool-invocation parts
-              const isToolPart =
-                part.type === "tool-call" ||
-                part.type === "tool-result" ||
-                part.type === "tool-invocation"
-              return !isToolPart
-            }
-            return true
+        // Filter out tool-related parts from the parts array
+        if (Array.isArray(message.parts)) {
+          const filteredParts = message.parts.filter((part) => {
+            // Keep only text and reasoning parts, remove tool parts
+            return part.type === "text" || part.type === "reasoning"
           })
 
-          // Extract text content
-          const textParts = filteredContent.filter(
-            (part: { type?: string }) =>
-              part && typeof part === "object" && part.type === "text"
-          )
-
-          if (textParts.length > 0) {
-            // Combine text parts into a single string
-            const textContent = textParts
-              .map((part: { text?: string }) => part.text || "")
-              .join("\n")
-              .trim()
-            cleanedMessage.content = textContent || "[Assistant response]"
-          } else if (filteredContent.length === 0) {
-            // If no content remains after filtering, provide fallback
-            cleanedMessage.content = "[Assistant response]"
+          if (filteredParts.length > 0) {
+            cleanedMessage.parts = filteredParts
           } else {
-            // Keep the filtered content as string if possible
-            cleanedMessage.content = "[Assistant response]"
+            // If no content remains after filtering, provide fallback text part
+            cleanedMessage.parts = [{ type: "text", text: "[Assistant response]" }]
           }
-        }
-
-        // If the message has no meaningful content after cleaning, provide fallback
-        if (
-          !cleanedMessage.content ||
-          (typeof cleanedMessage.content === "string" &&
-            cleanedMessage.content.trim() === "")
-        ) {
-          cleanedMessage.content = "[Assistant response]"
+        } else if (!message.parts || message.parts.length === 0) {
+          // If no parts at all, provide fallback
+          cleanedMessage.parts = [{ type: "text", text: "[Assistant response]" }]
         }
 
         return cleanedMessage
       }
 
-      // For user messages, clean any tool-related content from array content
-      if (message.role === "user" && Array.isArray(message.content)) {
-        const filteredContent = (
-          message.content as Array<{ type?: string }>
-        ).filter((part: { type?: string }) => {
-          if (part && typeof part === "object" && part.type) {
-            const isToolPart =
-              part.type === "tool-call" ||
-              part.type === "tool-result" ||
-              part.type === "tool-invocation"
-            return !isToolPart
-          }
-          return true
+      // For user messages, clean any tool-related content from parts array
+      if (message.role === "user" && Array.isArray(message.parts)) {
+        const filteredParts = message.parts.filter((part) => {
+          // Keep only text and file parts for user messages
+          return part.type === "text" || part.type === "file"
         })
 
-        if (
-          filteredContent.length !== (message.content as Array<unknown>).length
-        ) {
+        if (filteredParts.length !== message.parts.length) {
           return {
             ...message,
-            content:
-              filteredContent.length > 0 ? filteredContent : "User message",
+            parts:
+              filteredParts.length > 0 
+                ? filteredParts 
+                : [{ type: "text", text: "User message" }],
           }
         }
       }
 
       return message
     })
-    .filter((message): message is undefined => message !== null)
+    .filter((message): message is MessageAISDK => message !== null)
 
   return cleanedMessages
 }
@@ -114,17 +74,17 @@ export function cleanMessagesForTools(
 /**
  * Check if a message contains tool-related content
  */
-export function messageHasToolContent(message: undefined): boolean {
+export function messageHasToolContent(message: MessageAISDK): boolean {
   return !!(
-    message.toolInvocations?.length ||
     (message as { role: string }).role === "tool" ||
-    (Array.isArray(message.content) &&
-      (message.content as Array<{ type?: string }>).some(
-        (part: { type?: string }) =>
+    (Array.isArray(message.parts) &&
+      message.parts.some(
+        (part) =>
           part &&
           typeof part === "object" &&
           part.type &&
-          (part.type === "tool-call" ||
+          (part.type.startsWith("tool-") ||
+            part.type === "tool-call" ||
             part.type === "tool-result" ||
             part.type === "tool-invocation")
       ))

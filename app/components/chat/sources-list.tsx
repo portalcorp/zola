@@ -1,7 +1,7 @@
 "use client"
 
 import { cn } from "@/lib/utils"
-import type { SourceUIPart } from 'ai'
+import type { SourceUrlUIPart } from 'ai'
 import { CaretDown, Link } from "@phosphor-icons/react"
 import { AnimatePresence, motion } from "motion/react"
 import Image from "next/image"
@@ -9,7 +9,7 @@ import { useState } from "react"
 import { addUTM, formatUrl, getFavicon } from "./utils"
 
 type SourcesListProps = {
-  sources: SourceUIPart["source"][]
+  sources: any[] // Source objects from parts
   className?: string
 }
 

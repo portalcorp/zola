@@ -50,7 +50,7 @@ export function Reasoning({ reasoningText, isStreaming }: ReasoningProps) {
             transition={TRANSITION}
           >
             <div className="text-muted-foreground border-muted-foreground/20 flex flex-col border-l pl-4 text-sm">
-              <Markdown>{reasoning}</Markdown>
+              <Markdown>{reasoningText}</Markdown>
             </div>
           </motion.div>
         )}

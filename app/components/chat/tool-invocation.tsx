@@ -1,7 +1,7 @@
 "use client"
 
 import { cn } from "@/lib/utils"
-import type { ToolInvocationUIPart } from 'ai'
+import type { UIToolInvocation } from 'ai'
 import {
   CaretDown,
   CheckCircle,
@@ -15,7 +15,7 @@ import { AnimatePresence, motion } from "framer-motion"
 import { useMemo, useState } from "react"
 
 interface ToolInvocationProps {
-  toolInvocations: ToolInvocationUIPart[]
+  toolInvocations: any[] // Tool invocation parts from message
   className?: string
   defaultOpen?: boolean
 }
@@ -46,7 +46,7 @@ export function ToolInvocation({
       acc[toolCallId].push(item)
       return acc
     },
-    {} as Record<string, ToolInvocationUIPart[]>
+    {} as Record<string, any[]>
   )
 
   const uniqueToolIds = Object.keys(groupedTools)
@@ -126,7 +126,7 @@ export function ToolInvocation({
 }
 
 type SingleToolViewProps = {
-  toolInvocations: ToolInvocationUIPart[]
+  toolInvocations: any[]
   defaultOpen?: boolean
   className?: string
 }
@@ -146,7 +146,7 @@ function SingleToolView({
       acc[toolCallId].push(item)
       return acc
     },
-    {} as Record<string, ToolInvocationUIPart[]>
+    {} as Record<string, any[]>
   )
 
   // For each toolCallId, get the most informative state (result > call > requested)
@@ -165,7 +165,7 @@ function SingleToolView({
       // Return the most informative one
       return resultTool || callTool || partialCallTool
     })
-    .filter(Boolean) as ToolInvocationUIPart[]
+    .filter(Boolean) as any[]
 
   if (toolsToDisplay.length === 0) return null
 
@@ -202,7 +202,7 @@ function SingleToolCard({
   defaultOpen = false,
   className,
 }: {
-  toolData: ToolInvocationUIPart
+  toolData: any
   defaultOpen?: boolean
   className?: string
 }) {

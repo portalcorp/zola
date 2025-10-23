@@ -85,8 +85,6 @@ export function useChatCore({
     })
   }, [])
 
-  const [input, setInput] = useState('');
-
   // Initialize useChat
   const {
     messages,
@@ -96,6 +94,7 @@ export function useChatCore({
     reload,
     stop,
     setMessages,
+    input,
     setInput,
     append
   } = useChat({

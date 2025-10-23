@@ -75,7 +75,8 @@ function ResponseCard({ response, group }: ResponseCardProps) {
             hasScrollAnchor={false}
             className="bg-transparent p-0 px-0"
           >
-            {/* Message content is now in parts array */}
+            {response.message.parts?.filter(p => p.type === "text")
+              .map((p: any) => p.text).join("\n") || response.message.content || ""}
           </Message>
         ) : response.isLoading ? (
           <div className="space-y-2">
@@ -147,7 +148,8 @@ export function MultiModelConversation({
                         onReload={() => {}}
                         status="ready"
                       >
-                        {group.userMessage.content}
+                        {group.userMessage.parts?.filter(p => p.type === "text")
+                          .map((p: any) => p.text).join("\n") || group.userMessage.content || ""}
                       </Message>
                     </div>
                     <div

@@ -99,9 +99,9 @@ export function MessageAssistant({
         )}
         {...(isQuoteEnabled && { "data-message-id": messageId })}
       >
-        {reasoningParts && reasoningParts.reasoningText && (
+        {reasoningParts && (reasoningParts as any).text && (
           <Reasoning
-            reasoning={reasoningParts.reasoningText}
+            reasoningText={(reasoningParts as any).text}
             isStreaming={status === "streaming"}
           />
         )}

@@ -86,8 +86,6 @@ export function ProjectView({ projectId }: ProjectViewProps) {
     })
   }, [])
 
-  const [input, setInput] = useState('');
-
   const {
     messages,
     handleSubmit,
@@ -95,6 +93,7 @@ export function ProjectView({ projectId }: ProjectViewProps) {
     reload,
     stop,
     setMessages,
+    input,
     setInput
   } = useChat({
     id: `project-${projectId}-${currentChatId}`,

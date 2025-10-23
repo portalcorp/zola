@@ -50,6 +50,12 @@ export function Conversation({
             const hasScrollAnchor =
               isLast && messages.length > initialMessageCount.current
 
+            // Extract text content from parts for the children prop
+            const textContent = message.parts
+              ?.filter(part => part.type === "text")
+              .map(part => (part as any).text || "")
+              .join("\n") || ""
+              
             return (
               <Message
                 key={message.id}
@@ -65,7 +71,7 @@ export function Conversation({
                 status={status}
                 onQuote={onQuote}
               >
-                {/* Message content is now in parts array */}
+                {textContent}
               </Message>
             );
           })}
