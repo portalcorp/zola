@@ -38,7 +38,7 @@ export function cleanMessagesForTools(
             // If no content remains after filtering, provide fallback text part
             cleanedMessage.parts = [{ type: "text", text: "[Assistant response]" }]
           }
-        } else if (!message.parts || message.parts.length === 0) {
+        } else if (!message.parts || (message.parts as any[]).length === 0) {
           // If no parts at all, provide fallback
           cleanedMessage.parts = [{ type: "text", text: "[Assistant response]" }]
         }
