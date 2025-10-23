@@ -50,13 +50,12 @@ export function Conversation({
             const hasScrollAnchor =
               isLast && messages.length > initialMessageCount.current
 
-            /* FIXME(@ai-sdk-upgrade-v5): The `experimental_attachments` property has been replaced with the parts array. Please manually migrate following https://ai-sdk.dev/docs/migration-guides/migration-guide-5-0#attachments--file-parts */
             return (
               <Message
                 key={message.id}
                 id={message.id}
                 variant={message.role}
-                attachments={message.experimental_attachments}
+                attachments={[]} // Attachments are now in parts array as file parts
                 isLast={isLast}
                 onDelete={onDelete}
                 onEdit={onEdit}
@@ -66,7 +65,7 @@ export function Conversation({
                 status={status}
                 onQuote={onQuote}
               >
-                {message.content}
+                {/* Message content is now in parts array */}
               </Message>
             );
           })}

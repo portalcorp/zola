@@ -1,4 +1,4 @@
-import { Attachment } from 'ai'
+import type { Attachment } from 'ai-legacy'
 
 export type Json =
   | string

@@ -1,5 +1,5 @@
 import type { Database, Json } from "@/app/types/database.types"
-import type { Attachment } from 'ai'
+import type { Attachment } from 'ai-legacy'
 import type { SupabaseClient } from "@supabase/supabase-js"
 
 export type SupabaseClientType = SupabaseClient<Database>

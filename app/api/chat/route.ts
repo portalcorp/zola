@@ -2,8 +2,8 @@ import { SYSTEM_PROMPT_DEFAULT } from "@/lib/config"
 import { getAllModels } from "@/lib/models"
 import { getProviderForModel } from "@/lib/openproviders/provider-map"
 import type { ProviderWithoutOllama } from "@/lib/user-keys"
-import { Attachment } from 'ai'
-import { UIMessage as MessageAISDK, streamText, ToolSet, stepCountIs } from "ai";
+import { UIMessage as MessageAISDK, streamText, ToolSet, stepCountIs } from "ai"
+import type { Attachment } from 'ai-legacy'
 import { NextResponse } from "next/server"
 import {
   incrementMessageCount,

@@ -1,27 +1,27 @@
 import type { Message as MessageAISDK } from "@ai-sdk/react"
+import { isToolUIPart, getToolName } from "ai"
 
 export function getSources(parts: MessageAISDK["parts"]) {
   const sources = parts
     ?.filter(
-      (part) => part.type === "source" || part.type === "tool-invocation"
+      (part) => part.type === "source" || isToolUIPart(part)
     )
     .map((part) => {
       if (part.type === "source") {
         return part.source
       }
 
-      /* FIXME(@ai-sdk-upgrade-v5): The `part.toolInvocation.state` property has been removed. Please manually migrate following https://ai-sdk.dev/docs/migration-guides/migration-guide-5-0#tool-part-type-changes-uimessage */
-      if (part.type === "tool-invocation" &&
-      part.toolInvocation.state === "result") {
-        const result = part.toolInvocation.result
+      // Check for tool invocations with results
+      if (isToolUIPart(part) && part.state === "output-available") {
+        const output = part.output
+        const toolName = getToolName(part)
 
-        /* FIXME(@ai-sdk-upgrade-v5): The `part.toolInvocation.toolName` property has been removed. Please manually migrate following https://ai-sdk.dev/docs/migration-guides/migration-guide-5-0#tool-part-type-changes-uimessage */
-        if (part.toolInvocation.toolName === "summarizeSources" &&
-        result?.result?.[0]?.citations) {
-          return result.result.flatMap((item: { citations?: unknown[] }) => item.citations || [])
+        if (toolName === "summarizeSources" &&
+        output?.result?.[0]?.citations) {
+          return output.result.flatMap((item: { citations?: unknown[] }) => item.citations || [])
         }
 
-        return Array.isArray(result) ? result.flat() : result
+        return Array.isArray(output) ? output.flat() : output
       }
 
       return null

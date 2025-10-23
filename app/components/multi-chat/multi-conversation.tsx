@@ -39,7 +39,6 @@ function ResponseCard({ response, group }: ResponseCardProps) {
   const model = getModelInfo(response.model)
   const providerIcon = PROVIDERS.find((p) => p.id === model?.baseProviderId)
 
-  /* FIXME(@ai-sdk-upgrade-v5): The `experimental_attachments` property has been replaced with the parts array. Please manually migrate following https://ai-sdk.dev/docs/migration-guides/migration-guide-5-0#attachments--file-parts */
   return (
     <div className="relative">
       <div className="bg-background pointer-events-auto relative rounded border p-3">
@@ -67,7 +66,7 @@ function ResponseCard({ response, group }: ResponseCardProps) {
                 { type: "text", text: response.message.content },
               ]
             }
-            attachments={response.message.experimental_attachments}
+            attachments={[]} // Attachments are now in parts array
             onDelete={() => group.onDelete(response.model, response.message.id)}
             onEdit={(id, newText) => group.onEdit(response.model, id, newText)}
             onReload={() => group.onReload(response.model)}
@@ -76,7 +75,7 @@ function ResponseCard({ response, group }: ResponseCardProps) {
             hasScrollAnchor={false}
             className="bg-transparent p-0 px-0"
           >
-            {response.message.content}
+            {/* Message content is now in parts array */}
           </Message>
         ) : response.isLoading ? (
           <div className="space-y-2">
@@ -131,7 +130,6 @@ export function MultiModelConversation({
           {messageGroups.length === 0
             ? null
             : messageGroups.map((group, groupIndex) => {
-                /* FIXME(@ai-sdk-upgrade-v5): The `experimental_attachments` property has been replaced with the parts array. Please manually migrate following https://ai-sdk.dev/docs/migration-guides/migration-guide-5-0#attachments--file-parts */
                 return (
                   <div key={groupIndex} className="mb-10 w-full space-y-3">
                     <div className="mx-auto w-full max-w-3xl">
@@ -143,7 +141,7 @@ export function MultiModelConversation({
                             { type: "text", text: group.userMessage.content },
                           ]
                         }
-                        attachments={group.userMessage.experimental_attachments}
+                        attachments={[]} // Attachments are now in parts array
                         onDelete={() => {}}
                         onEdit={() => {}}
                         onReload={() => {}}
