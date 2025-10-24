@@ -32,7 +32,7 @@ export function getProviderApiKey(provider: string): string | undefined {
 
 export function createEnvWithUserKeys(
   userKeys: Record<string, string> = {}
-): typeof env & Record<string, string | undefined> {
+): Record<string, string | undefined> {
   // Start with known providers
   const result: Record<string, string | undefined> = {
     OPENAI_API_KEY: userKeys.openai || env.OPENAI_API_KEY,

@@ -4,7 +4,7 @@ import type { Tables } from "@/app/types/database.types"
 import { Message, MessageContent } from "@/components/prompt-kit/message"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
-import type { Message as MessageAISDK } from "@ai-sdk/react"
+import type { UIMessage as MessageAISDK } from "ai"
 import { ArrowUpRight } from "@phosphor-icons/react/dist/ssr"
 import Link from "next/link"
 import { Header } from "./header"
@@ -84,7 +84,8 @@ export default function Article({
                       "prose-h1:scroll-m-20 prose-h1:text-2xl prose-h1:font-semibold prose-h2:mt-8 prose-h2:scroll-m-20 prose-h2:text-xl prose-h2:mb-3 prose-h2:font-medium prose-h3:scroll-m-20 prose-h3:text-base prose-h3:font-medium prose-h4:scroll-m-20 prose-h5:scroll-m-20 prose-h6:scroll-m-20 prose-strong:font-medium prose-table:block prose-table:overflow-y-auto"
                     )}
                   >
-                    {message.content!}
+                    {parts?.filter((p): p is { type: "text"; text: string } => p.type === "text")
+                      .map(p => p.text).join("\n") || ""}
                   </MessageContent>
                 </Message>
                 {sources && sources.length > 0 && (

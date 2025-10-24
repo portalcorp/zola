@@ -2,6 +2,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { toast } from "@/components/ui/toast"
 import { useChat } from "@ai-sdk/react"
+import type { UIMessage } from "ai"
 import { DefaultChatTransport } from "ai"
 import { useMemo } from "react"
 
@@ -54,9 +55,9 @@ export function useMultiChat(models: ModelConfig[]): ModelChat[] {
       return {
         model,
         messages: chatHook.messages,
-        isLoading: chatHook.isLoading,
-        append: (message: any, options?: any) => {
-          return chatHook.append(message, options)
+        isLoading: chatHook.status === "streaming",
+        append: (message: { role: string; content: string }, options?: any) => {
+          return chatHook.sendMessage({ text: message.content }, options)
         },
         stop: chatHook.stop,
       }
@@ -65,7 +66,7 @@ export function useMultiChat(models: ModelConfig[]): ModelChat[] {
     return instances
     // todo: fix this
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [models, ...chatHooks.flatMap((chat) => [chat.messages, chat.isLoading])])
+  }, [models, ...chatHooks.flatMap((chat) => [chat.messages, chat.status])])
 
   return activeChatInstances
 }

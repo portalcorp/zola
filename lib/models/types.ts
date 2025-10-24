@@ -37,7 +37,7 @@ type ModelConfig = {
   apiSdk?: (
     apiKey?: string,
     opts?: { enableSearch?: boolean }
-  ) => LanguageModelV1 | Promise<LanguageModelV1 | undefined>
+  ) => LanguageModelV2 | Promise<LanguageModelV2 | undefined>
 
   accessible?: boolean // true if the model is accessible to the user
 }

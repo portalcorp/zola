@@ -2,7 +2,7 @@ import Image from "next/image"
 import { useState } from "react"
 import { addUTM, getFavicon, getSiteName } from "./utils"
 
-type ImageResult = {
+export type ImageResult = {
   title: string
   imageUrl: string
   sourceUrl: string

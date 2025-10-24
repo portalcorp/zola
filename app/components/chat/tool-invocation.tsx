@@ -137,6 +137,7 @@ function SingleToolView({
   className,
 }: SingleToolViewProps) {
   // Group by toolCallId and pick the most informative state
+  type ToolInvocationItem = typeof toolInvocations[0]
   const groupedTools = toolInvocations.reduce(
     (acc, item) => {
       const { toolCallId } = item.toolInvocation
@@ -146,20 +147,20 @@ function SingleToolView({
       acc[toolCallId].push(item)
       return acc
     },
-    {} as Record<string, any[]>
+    {} as Record<string, ToolInvocationItem[]>
   )
 
   // For each toolCallId, get the most informative state (result > call > requested)
-  const toolsToDisplay = Object.values(groupedTools)
+  const toolsToDisplay = (Object.values(groupedTools) as ToolInvocationItem[][])
     .map((group) => {
       const resultTool = group.find(
-        (item) => item.toolInvocation.state === "result"
+        (item: ToolInvocationItem) => item.toolInvocation.state === "result"
       )
       const callTool = group.find(
-        (item) => item.toolInvocation.state === "call"
+        (item: ToolInvocationItem) => item.toolInvocation.state === "call"
       )
       const partialCallTool = group.find(
-        (item) => item.toolInvocation.state === "partial-call"
+        (item: ToolInvocationItem) => item.toolInvocation.state === "partial-call"
       )
 
       // Return the most informative one

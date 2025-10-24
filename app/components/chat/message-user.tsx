@@ -16,7 +16,6 @@ import {
 } from "@/components/prompt-kit/message"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
-import { Message as MessageType } from "@ai-sdk/react"
 import { Check, Copy, Trash } from "@phosphor-icons/react"
 import Image from "next/image"
 import { useRef, useState } from "react"
@@ -26,9 +25,15 @@ const getTextFromDataUrl = (dataUrl: string) => {
   return base64
 }
 
+type Attachment = {
+  name?: string
+  contentType?: string
+  url: string
+}
+
 export type MessageUserProps = {
   hasScrollAnchor?: boolean
-  attachments?: MessageType["experimental_attachments"]
+  attachments?: Attachment[]
   children: string
   copied: boolean
   copyToClipboard: () => void
@@ -80,7 +85,7 @@ export function MessageUser({
         className
       )}
     >
-      {attachments?.map((attachment, index) => (
+      {attachments?.map((attachment: Attachment, index: number) => (
         <div
           className="flex flex-row gap-2"
           key={`${attachment.name}-${index}`}

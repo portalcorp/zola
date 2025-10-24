@@ -3,7 +3,6 @@ import { getAllModels } from "@/lib/models"
 import { getProviderForModel } from "@/lib/openproviders/provider-map"
 import type { ProviderWithoutOllama } from "@/lib/user-keys"
 import { UIMessage as MessageAISDK, streamText, ToolSet, stepCountIs, convertToModelMessages } from "ai"
-import type { Attachment } from 'ai-legacy'
 import { NextResponse } from "next/server"
 import {
   incrementMessageCount,
@@ -70,7 +69,7 @@ export async function POST(req: Request) {
         name: (part as any).name || "file",
         contentType: (part as any).mediaType || "application/octet-stream",
         url: (part as any).url || "",
-      })) as Attachment[]
+      }))
       
       await logUserMessage({
         supabase,

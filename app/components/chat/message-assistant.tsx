@@ -6,13 +6,13 @@ import {
 } from "@/components/prompt-kit/message"
 import { useUserPreferences } from "@/lib/user-preference-store/provider"
 import { cn } from "@/lib/utils"
-import type { Message as MessageAISDK } from "@ai-sdk/react"
+import { type UIMessage as MessageAISDK, isToolUIPart, getToolName } from "ai"
 import { ArrowClockwise, Check, Copy } from "@phosphor-icons/react"
 import { useCallback, useRef } from "react"
 import { getSources } from "./get-sources"
 import { QuoteButton } from "./quote-button"
 import { Reasoning } from "./reasoning"
-import { SearchImages } from "./search-images"
+import { SearchImages, type ImageResult } from "./search-images"
 import { SourcesList } from "./sources-list"
 import { ToolInvocation } from "./tool-invocation"
 import { useAssistantMessageSelection } from "./useAssistantMessageSelection"
@@ -45,30 +45,32 @@ export function MessageAssistant({
   onQuote,
 }: MessageAssistantProps) {
   const { preferences } = useUserPreferences()
-  const sources = getSources(parts)
+  const sources = getSources(parts || [])
   const toolInvocationParts = parts?.filter(
-    (part) => part.type === "tool-invocation"
+    (part) => isToolUIPart(part)
   )
-  const reasoningParts = parts?.find((part) => part.type === "reasoning")
+  const reasoningParts = parts?.find((part) => part.type === "reasoning") as { type: "reasoning"; text: string } | undefined
   const contentNullOrEmpty = children === null || children === ""
   const isLastStreaming = status === "streaming" && isLast
-  const searchImageResults =
-    parts
-      ?.filter(
-        (part) =>
-          part.type === "tool-invocation" &&
-          part.toolInvocation?.state === "result" &&
-          part.toolInvocation?.toolName === "imageSearch" &&
-          part.toolInvocation?.result?.content?.[0]?.type === "images"
+  const searchImageResults: ImageResult[] = (parts
+    ?.filter((part) => {
+      if (!isToolUIPart(part)) return false
+      const toolName = getToolName(part)
+      return (
+        toolName === "imageSearch" &&
+        part.state === "output-available" &&
+        part.output &&
+        typeof part.output === "object" &&
+        "content" in part.output &&
+        Array.isArray((part.output as { content?: unknown[] }).content) &&
+        (part.output as { content?: Array<{ type?: string }> }).content?.[0]?.type === "images"
       )
-      .flatMap((part) =>
-        part.type === "tool-invocation" &&
-        part.toolInvocation?.state === "result" &&
-        part.toolInvocation?.toolName === "imageSearch" &&
-        part.toolInvocation?.result?.content?.[0]?.type === "images"
-          ? (part.toolInvocation?.result?.content?.[0]?.results ?? [])
-          : []
-      ) ?? []
+    })
+    .flatMap((part) => {
+      if (!isToolUIPart(part) || part.state !== "output-available") return []
+      const output = part.output as { content?: Array<{ results?: ImageResult[] }> }
+      return output?.content?.[0]?.results ?? []
+    }) ?? []) as ImageResult[]
 
   const isQuoteEnabled = !preferences.multiModelEnabled
   const messageRef = useRef<HTMLDivElement>(null)
@@ -99,9 +101,9 @@ export function MessageAssistant({
         )}
         {...(isQuoteEnabled && { "data-message-id": messageId })}
       >
-        {reasoningParts && (reasoningParts as any).text && (
+        {reasoningParts && reasoningParts.text && (
           <Reasoning
-            reasoningText={(reasoningParts as any).text}
+            reasoningText={reasoningParts.text}
             isStreaming={status === "streaming"}
           />
         )}

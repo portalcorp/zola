@@ -2,7 +2,7 @@ import { toast } from "@/components/ui/toast"
 import { checkRateLimits } from "@/lib/api"
 import type { Chats } from "@/lib/chat-store/types"
 import { REMAINING_QUERY_ALERT_THRESHOLD } from "@/lib/config"
-import { UIMessage } from "ai"
+import type { UIMessage } from "ai"
 import { useCallback } from "react"
 
 type UseChatOperationsProps = {

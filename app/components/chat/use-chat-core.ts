@@ -5,16 +5,15 @@ import { MESSAGE_MAX_LENGTH, SYSTEM_PROMPT_DEFAULT } from "@/lib/config"
 import { Attachment } from "@/lib/file-handling"
 import { API_ROUTE_CHAT } from "@/lib/routes"
 import type { UserProfile } from "@/lib/user/types"
-import type { Message } from "@ai-sdk/react"
 import { useChat } from "@ai-sdk/react"
-import { DefaultChatTransport } from "ai"
+import { DefaultChatTransport, type UIMessage } from "ai"
 import { useSearchParams } from "next/navigation"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 
 type UseChatCoreProps = {
-  initialMessages: Message[]
+  initialMessages: UIMessage[]
   draftValue: string
-  cacheAndAddMessage: (message: Message) => void
+  cacheAndAddMessage: (message: UIMessage) => void
   chatId: string | null
   user: UserProfile | null
   files: File[]
@@ -85,27 +84,23 @@ export function useChatCore({
     })
   }, [])
 
+  // Input state management (no longer provided by useChat in v5)
+  const [input, setInput] = useState(draftValue)
+
   // Initialize useChat
   const {
     messages,
-    handleSubmit,
+    sendMessage,
     status,
     error,
-    reload,
+    regenerate,
     stop,
     setMessages,
-    input,
-    setInput,
-    append
   } = useChat({
-    initialMessages,
-    initialInput: draftValue,
-    onFinish: cacheAndAddMessage,
+    transport: new DefaultChatTransport({ api: API_ROUTE_CHAT }),
+    messages: initialMessages,
+    onFinish: ({ message }) => cacheAndAddMessage(message),
     onError: handleError,
-
-    transport: new DefaultChatTransport({
-      api: API_ROUTE_CHAT
-    })
   })
 
   // Handle search params on mount
@@ -139,13 +134,10 @@ export function useChatCore({
     const optimisticAttachments =
       files.length > 0 ? createOptimisticAttachments(files) : []
 
-    const optimisticMessage = {
+    const optimisticMessage: UIMessage = {
       id: optimisticId,
-      content: input,
       role: "user" as const,
-      createdAt: new Date(),
-      experimental_attachments:
-        optimisticAttachments.length > 0 ? optimisticAttachments : undefined,
+      parts: [{ type: "text", text: input }],
     }
 
     setMessages((prev) => [...prev, optimisticMessage])
@@ -158,14 +150,14 @@ export function useChatCore({
       const allowed = await checkLimitsAndNotify(uid)
       if (!allowed) {
         setMessages((prev) => prev.filter((m) => m.id !== optimisticId))
-        cleanupOptimisticAttachments(optimisticMessage.experimental_attachments)
+        cleanupOptimisticAttachments(optimisticAttachments)
         return
       }
 
       const currentChatId = await ensureChatExists(uid, input)
       if (!currentChatId) {
         setMessages((prev) => prev.filter((msg) => msg.id !== optimisticId))
-        cleanupOptimisticAttachments(optimisticMessage.experimental_attachments)
+        cleanupOptimisticAttachments(optimisticAttachments)
         return
       }
 
@@ -175,7 +167,7 @@ export function useChatCore({
           status: "error",
         })
         setMessages((prev) => prev.filter((msg) => msg.id !== optimisticId))
-        cleanupOptimisticAttachments(optimisticMessage.experimental_attachments)
+        cleanupOptimisticAttachments(optimisticAttachments)
         return
       }
 
@@ -184,9 +176,7 @@ export function useChatCore({
         attachments = await handleFileUploads(uid, currentChatId)
         if (attachments === null) {
           setMessages((prev) => prev.filter((m) => m.id !== optimisticId))
-          cleanupOptimisticAttachments(
-            optimisticMessage.experimental_attachments
-          )
+          cleanupOptimisticAttachments(optimisticAttachments)
           return
         }
       }
@@ -200,12 +190,11 @@ export function useChatCore({
           systemPrompt: systemPrompt || SYSTEM_PROMPT_DEFAULT,
           enableSearch,
         },
-        experimental_attachments: attachments || undefined,
       }
 
-      handleSubmit(undefined, options)
+      sendMessage({ text: input }, options)
       setMessages((prev) => prev.filter((msg) => msg.id !== optimisticId))
-      cleanupOptimisticAttachments(optimisticMessage.experimental_attachments)
+      cleanupOptimisticAttachments(optimisticAttachments)
       cacheAndAddMessage(optimisticMessage)
       clearDraft()
 
@@ -214,7 +203,7 @@ export function useChatCore({
       }
     } catch {
       setMessages((prev) => prev.filter((msg) => msg.id !== optimisticId))
-      cleanupOptimisticAttachments(optimisticMessage.experimental_attachments)
+      cleanupOptimisticAttachments(optimisticAttachments)
       toast({ title: "Failed to send message", status: "error" })
     } finally {
       setIsSubmitting(false)
@@ -235,7 +224,7 @@ export function useChatCore({
     isAuthenticated,
     systemPrompt,
     enableSearch,
-    handleSubmit,
+    sendMessage,
     cacheAndAddMessage,
     clearDraft,
     messages.length,
@@ -248,11 +237,10 @@ export function useChatCore({
     async (suggestion: string) => {
       setIsSubmitting(true)
       const optimisticId = `optimistic-${Date.now().toString()}`
-      const optimisticMessage = {
+      const optimisticMessage: UIMessage = {
         id: optimisticId,
-        content: suggestion,
         role: "user" as const,
-        createdAt: new Date(),
+        parts: [{ type: "text", text: suggestion }],
       }
 
       setMessages((prev) => [...prev, optimisticMessage])
@@ -288,11 +276,8 @@ export function useChatCore({
           },
         }
 
-        append(
-          {
-            role: "user",
-            content: suggestion,
-          },
+        sendMessage(
+          { text: suggestion },
           options
         )
         setMessages((prev) => prev.filter((msg) => msg.id !== optimisticId))
@@ -307,7 +292,7 @@ export function useChatCore({
       ensureChatExists,
       selectedModel,
       user,
-      append,
+      sendMessage,
       checkLimitsAndNotify,
       isAuthenticated,
       setMessages,
@@ -332,8 +317,8 @@ export function useChatCore({
       },
     }
 
-    reload(options)
-  }, [user, chatId, selectedModel, isAuthenticated, systemPrompt, reload])
+    regenerate(options)
+  }, [user, chatId, selectedModel, isAuthenticated, systemPrompt, regenerate])
 
   // Handle input change - now with access to the real setInput function!
   const { setDraftValue } = useChatDraft(chatId)
@@ -349,14 +334,13 @@ export function useChatCore({
     // Chat state
     messages,
     input,
-    handleSubmit,
+    sendMessage,
     status,
     error,
-    reload,
+    regenerate,
     stop,
     setMessages,
     setInput,
-    append,
     isAuthenticated,
     systemPrompt,
     hasSentFirstMessageRef,

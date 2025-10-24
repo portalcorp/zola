@@ -1,5 +1,3 @@
-import type { Attachment } from 'ai-legacy'
-
 export type Json =
   | string
   | number
@@ -144,13 +142,12 @@ export type Database = {
       }
       messages: {
         Row: {
-          /* FIXME(@ai-sdk-upgrade-v5): The `experimental_attachments` property has been replaced with the parts array. Please manually migrate following https://ai-sdk.dev/docs/migration-guides/migration-guide-5-0#attachments--file-parts */
-          experimental_attachments: Attachment[]
+          experimental_attachments: Json | null
           chat_id: string
           content: string | null
           created_at: string | null
           id: number
-          role: "system" | "user" | "assistant" | "data"
+          role: "system" | "user" | "assistant"
           parts: Json | null
           user_id?: string | null
           message_group_id: string | null
@@ -158,12 +155,12 @@ export type Database = {
         }
         Insert: {
           /* FIXME(@ai-sdk-upgrade-v5): The `experimental_attachments` property has been replaced with the parts array. Please manually migrate following https://ai-sdk.dev/docs/migration-guides/migration-guide-5-0#attachments--file-parts */
-          experimental_attachments?: Attachment[]
+          experimental_attachments?: Json | null
           chat_id: string
           content: string | null
           created_at?: string | null
           id?: number
-          role: "system" | "user" | "assistant" | "data"
+          role: "system" | "user" | "assistant"
           parts?: Json
           user_id?: string | null
           message_group_id?: string | null
@@ -171,12 +168,12 @@ export type Database = {
         }
         Update: {
           /* FIXME(@ai-sdk-upgrade-v5): The `experimental_attachments` property has been replaced with the parts array. Please manually migrate following https://ai-sdk.dev/docs/migration-guides/migration-guide-5-0#attachments--file-parts */
-          experimental_attachments?: Attachment[]
+          experimental_attachments?: Json | null
           chat_id?: string
           content?: string | null
           created_at?: string | null
           id?: number
-          role?: "system" | "user" | "assistant" | "data"
+          role?: "system" | "user" | "assistant"
           parts?: Json
           user_id?: string | null
           message_group_id?: string | null

@@ -9,7 +9,7 @@ import { ScrollButton } from "@/components/prompt-kit/scroll-button"
 import { getModelInfo } from "@/lib/models"
 import { PROVIDERS } from "@/lib/providers"
 import { cn } from "@/lib/utils"
-import { Message as MessageType } from "@ai-sdk/react"
+import type { UIMessage as MessageType } from "ai"
 import { useEffect, useState } from "react"
 import { Message } from "../chat/message"
 
@@ -61,11 +61,7 @@ function ResponseCard({ response, group }: ResponseCardProps) {
           <Message
             id={response.message.id}
             variant="assistant"
-            parts={
-              response.message.parts || [
-                { type: "text", text: response.message.content },
-              ]
-            }
+            parts={response.message.parts || []}
             attachments={[]} // Attachments are now in parts array
             onDelete={() => group.onDelete(response.model, response.message.id)}
             onEdit={(id, newText) => group.onEdit(response.model, id, newText)}
@@ -75,8 +71,8 @@ function ResponseCard({ response, group }: ResponseCardProps) {
             hasScrollAnchor={false}
             className="bg-transparent p-0 px-0"
           >
-            {response.message.parts?.filter(p => p.type === "text")
-              .map((p: any) => p.text).join("\n") || response.message.content || ""}
+            {response.message.parts?.filter((p): p is { type: "text"; text: string } => p.type === "text")
+              .map(p => p.text).join("\n") || ""}
           </Message>
         ) : response.isLoading ? (
           <div className="space-y-2">
@@ -137,19 +133,15 @@ export function MultiModelConversation({
                       <Message
                         id={group.userMessage.id}
                         variant="user"
-                        parts={
-                          group.userMessage.parts || [
-                            { type: "text", text: group.userMessage.content },
-                          ]
-                        }
+                        parts={group.userMessage.parts || []}
                         attachments={[]} // Attachments are now in parts array
                         onDelete={() => {}}
                         onEdit={() => {}}
                         onReload={() => {}}
                         status="ready"
                       >
-                        {group.userMessage.parts?.filter(p => p.type === "text")
-                          .map((p: any) => p.text).join("\n") || group.userMessage.content || ""}
+                        {group.userMessage.parts?.filter((p): p is { type: "text"; text: string } => p.type === "text")
+                          .map(p => p.text).join("\n") || ""}
                       </Message>
                     </div>
                     <div

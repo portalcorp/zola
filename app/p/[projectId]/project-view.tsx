@@ -37,6 +37,7 @@ export function ProjectView({ projectId }: ProjectViewProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [enableSearch, setEnableSearch] = useState(false)
   const [currentChatId, setCurrentChatId] = useState<string | null>(null)
+  const [input, setInput] = useState('')
   const { user } = useUser()
   const { createNewChat, bumpChat } = useChats()
   const { cacheAndAddMessage } = useMessages()
@@ -88,17 +89,14 @@ export function ProjectView({ projectId }: ProjectViewProps) {
 
   const {
     messages,
-    handleSubmit,
+    sendMessage,
     status,
-    reload,
+    regenerate,
     stop,
     setMessages,
-    input,
-    setInput
   } = useChat({
     id: `project-${projectId}-${currentChatId}`,
-    initialMessages: [],
-    onFinish: cacheAndAddMessage,
+    onFinish: ({ message }) => cacheAndAddMessage(message),
     onError: handleError,
 
     transport: new DefaultChatTransport({
@@ -203,12 +201,12 @@ export function ProjectView({ projectId }: ProjectViewProps) {
     const optimisticAttachments =
       files.length > 0 ? createOptimisticAttachments(files) : []
 
-    const optimisticMessage = {
+    const optimisticMessage: any = {
       id: optimisticId,
-      content: input,
+      parts: [{ type: 'text', text: input }],
       role: "user" as const,
       createdAt: new Date(),
-      experimental_attachments:
+      attachments:
         optimisticAttachments.length > 0 ? optimisticAttachments : undefined,
     }
 
@@ -222,7 +220,7 @@ export function ProjectView({ projectId }: ProjectViewProps) {
       const currentChatId = await ensureChatExists(user.id)
       if (!currentChatId) {
         setMessages((prev) => prev.filter((msg) => msg.id !== optimisticId))
-        cleanupOptimisticAttachments(optimisticMessage.experimental_attachments)
+        cleanupOptimisticAttachments((optimisticMessage as any).attachments)
         return
       }
 
@@ -232,7 +230,7 @@ export function ProjectView({ projectId }: ProjectViewProps) {
           status: "error",
         })
         setMessages((prev) => prev.filter((msg) => msg.id !== optimisticId))
-        cleanupOptimisticAttachments(optimisticMessage.experimental_attachments)
+        cleanupOptimisticAttachments((optimisticMessage as any).attachments)
         return
       }
 
@@ -257,12 +255,16 @@ export function ProjectView({ projectId }: ProjectViewProps) {
           systemPrompt: SYSTEM_PROMPT_DEFAULT,
           enableSearch,
         },
-        experimental_attachments: attachments || undefined,
+        attachments: attachments || undefined,
       }
 
-      handleSubmit(undefined, options)
+      // v5: sendMessage with text and options
+      sendMessage(
+        { text: input },
+        options
+      )
       setMessages((prev) => prev.filter((msg) => msg.id !== optimisticId))
-      cleanupOptimisticAttachments(optimisticMessage.experimental_attachments)
+      cleanupOptimisticAttachments((optimisticMessage as any).attachments)
       cacheAndAddMessage(optimisticMessage)
 
       // Bump existing chats to top (non-blocking, after submit)
@@ -271,7 +273,7 @@ export function ProjectView({ projectId }: ProjectViewProps) {
       }
     } catch {
       setMessages((prev) => prev.filter((msg) => msg.id !== optimisticId))
-      cleanupOptimisticAttachments(optimisticMessage.experimental_attachments)
+      cleanupOptimisticAttachments((optimisticMessage as any).attachments)
       toast({ title: "Failed to send message", status: "error" })
     } finally {
       setIsSubmitting(false)
@@ -288,7 +290,7 @@ export function ProjectView({ projectId }: ProjectViewProps) {
     ensureChatExists,
     handleFileUploads,
     selectedModel,
-    handleSubmit,
+    sendMessage,
     cacheAndAddMessage,
     messages.length,
     bumpChat,
@@ -310,8 +312,8 @@ export function ProjectView({ projectId }: ProjectViewProps) {
       },
     }
 
-    reload(options)
-  }, [user, selectedModel, reload])
+    regenerate(options)
+  }, [user, selectedModel, regenerate])
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString("en-US", {

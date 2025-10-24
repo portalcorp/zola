@@ -1,38 +1,65 @@
-import type { Message as MessageAISDK } from "@ai-sdk/react"
-import { isToolUIPart, getToolName } from "ai"
+import { isToolUIPart, getToolName, type UIMessage } from "ai"
 
-export function getSources(parts: MessageAISDK["parts"]) {
+type Source = {
+  url: string
+  title?: string
+  id?: string
+}
+
+export function getSources(parts: UIMessage["parts"]): Source[] {
   const sources = parts
     ?.filter(
-      (part) => part.type === "source" || isToolUIPart(part)
+      (part) => part.type === "source-url" || isToolUIPart(part)
     )
-    .map((part) => {
-      if (part.type === "source") {
-        return part.source
+    .map((part): Source | Source[] | null => {
+      if (part.type === "source-url") {
+        return {
+          url: part.url,
+          title: part.title,
+          id: part.sourceId,
+        }
       }
 
       // Check for tool invocations with results
       if (isToolUIPart(part) && part.state === "output-available") {
-        const output = part.output
+        const output = part.output as {
+          result?: Array<{ citations?: Source[] }>
+        } | Source[] | Source | null
         const toolName = getToolName(part)
 
-        if (toolName === "summarizeSources" &&
-        output?.result?.[0]?.citations) {
-          return output.result.flatMap((item: { citations?: unknown[] }) => item.citations || [])
+        if (toolName === "summarizeSources" && 
+            output && 
+            typeof output === "object" && 
+            "result" in output &&
+            Array.isArray(output.result) &&
+            output.result[0]?.citations) {
+          return output.result.flatMap((item) => item.citations || [])
         }
 
-        return Array.isArray(output) ? output.flat() : output
+        if (Array.isArray(output)) {
+          return output.flat()
+        }
+        
+        if (output && typeof output === "object" && "url" in output) {
+          return output as Source
+        }
+
+        return null
       }
 
       return null
     })
-    .filter(Boolean)
+    .filter((item): item is Source | Source[] => item !== null)
     .flat()
 
   const validSources =
     sources?.filter(
-      (source) =>
-        source && typeof source === "object" && source.url && source.url !== ""
+      (source): source is Source =>
+        source !== null && 
+        typeof source === "object" && 
+        "url" in source &&
+        typeof source.url === "string" &&
+        source.url !== ""
     ) || []
 
   return validSources
