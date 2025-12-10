@@ -1,6 +1,7 @@
 "use client"
 
 import { useModel } from "@/lib/model-store/provider"
+import { getRecommendedModels } from "@/lib/model-store/utils"
 import { ModelConfig } from "@/lib/models/types"
 import { PROVIDERS } from "@/lib/providers"
 import { useUserPreferences } from "@/lib/user-preference-store/provider"
@@ -8,6 +9,7 @@ import {
   DotsSixVerticalIcon,
   MinusIcon,
   PlusIcon,
+  SparkleIcon,
   StarIcon,
 } from "@phosphor-icons/react"
 import { AnimatePresence, motion, Reorder } from "framer-motion"
@@ -44,6 +46,11 @@ export function ModelsSettings() {
       })
       .filter(Boolean) as FavoriteModelItem[]
   }, [currentFavoriteModels, models, isModelHidden])
+
+  // Get recommended models (excluding favorites)
+  const recommendedModels = useMemo(() => {
+    return getRecommendedModels(models, currentFavoriteModels || [], isModelHidden)
+  }, [models, currentFavoriteModels, isModelHidden])
 
   // Available models that aren't favorites yet, filtered and grouped by provider
   const availableModelsByProvider = useMemo(() => {
@@ -123,13 +130,14 @@ export function ModelsSettings() {
         </p>
       </div>
 
-      {/* Favorite Models - Drag and Drop List */}
-      <div>
-        <h4 className="mb-3 text-sm font-medium">
-          Your favorites ({favoriteModels.length})
-        </h4>
-        <AnimatePresence initial={false}>
-          {favoriteModels.length > 0 ? (
+      {/* Favorite Models - Drag and Drop List (only shown if user has favorites) */}
+      {favoriteModels.length > 0 && (
+        <div>
+          <h4 className="mb-3 flex items-center gap-2 text-sm font-medium">
+            <StarIcon className="size-4" weight="fill" />
+            Your favorites ({favoriteModels.length})
+          </h4>
+          <AnimatePresence initial={false}>
             <Reorder.Group
               axis="y"
               values={favoriteModels}
@@ -173,13 +181,8 @@ export function ModelsSettings() {
                       <button
                         onClick={() => removeFavorite(model.id)}
                         type="button"
-                        disabled={favoriteModels.length <= 1}
-                        className="text-muted-foreground rounded-md border p-1 opacity-0 transition-all group-hover:opacity-100 disabled:cursor-not-allowed disabled:opacity-50"
-                        title={
-                          favoriteModels.length <= 1
-                            ? "At least one favorite model is required"
-                            : "Remove from favorites"
-                        }
+                        className="text-muted-foreground rounded-md border p-1 opacity-0 transition-all group-hover:opacity-100"
+                        title="Remove from favorites"
                       >
                         <MinusIcon className="size-4" />
                       </button>
@@ -188,21 +191,67 @@ export function ModelsSettings() {
                 )
               })}
             </Reorder.Group>
-          ) : (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="border-border text-muted-foreground flex h-32 items-center justify-center rounded-lg border-2 border-dashed"
-            >
-              <div className="text-center">
-                <StarIcon className="mx-auto mb-2 size-8 opacity-50" />
-                <p className="text-sm">No favorite models yet</p>
-                <p className="text-xs">Add models from the list below</p>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
+          </AnimatePresence>
+        </div>
+      )}
+
+      {/* Recommended Models Section */}
+      {recommendedModels.length > 0 && (
+        <div>
+          <h4 className="mb-3 flex items-center gap-2 text-sm font-medium">
+            <SparkleIcon className="size-4" />
+            Recommended models
+          </h4>
+          <p className="text-muted-foreground mb-4 text-sm">
+            Curated models to get you started. Add them to your favorites.
+          </p>
+          <div className="space-y-2">
+            {recommendedModels.map((model) => {
+              const ProviderIcon = getProviderIcon(model)
+              const modelProvider = PROVIDERS.find(
+                (p) => p.id === model.provider
+              )
+
+              return (
+                <motion.div
+                  key={model.id}
+                  layout
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  transition={{ duration: 0.2 }}
+                  className="border-border flex items-center justify-between rounded-lg border p-3"
+                >
+                  <div className="flex items-center gap-3">
+                    {ProviderIcon && <ProviderIcon className="size-5 shrink-0" />}
+                    <div className="flex flex-col">
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium">{model.name}</span>
+                        <span className="text-muted-foreground bg-muted rounded px-1.5 py-0.5 text-xs">
+                          via {modelProvider?.name || model.provider}
+                        </span>
+                      </div>
+                      {model.description && (
+                        <span className="text-muted-foreground text-xs">
+                          {model.description}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => toggleFavorite(model.id)}
+                    type="button"
+                    className="text-muted-foreground hover:text-foreground border-border rounded-md border p-1 transition-colors"
+                    title="Add to favorites"
+                  >
+                    <PlusIcon className="size-4" />
+                  </button>
+                </motion.div>
+              )
+            })}
+          </div>
+        </div>
+      )}
 
       {/* Available Models */}
       <div>

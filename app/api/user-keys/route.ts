@@ -5,7 +5,7 @@ import { NextResponse } from "next/server"
 
 export async function POST(request: Request) {
   try {
-    const { provider, apiKey } = await request.json()
+    const { provider, apiKey, useForChat } = await request.json()
 
     if (!provider || !apiKey) {
       return NextResponse.json(
@@ -45,6 +45,7 @@ export async function POST(request: Request) {
       provider,
       encrypted_key: encrypted,
       iv,
+      use_for_chat: useForChat ?? false,
       updated_at: new Date().toISOString(),
     })
 
@@ -110,6 +111,58 @@ export async function POST(request: Request) {
     })
   } catch (error) {
     console.error("Error in POST /api/user-keys:", error)
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    )
+  }
+}
+
+export async function PATCH(request: Request) {
+  try {
+    const { provider, useForChat } = await request.json()
+
+    if (!provider || typeof useForChat !== "boolean") {
+      return NextResponse.json(
+        { error: "Provider and useForChat boolean are required" },
+        { status: 400 }
+      )
+    }
+
+    const supabase = await createClient()
+    if (!supabase) {
+      return NextResponse.json(
+        { error: "Supabase not available" },
+        { status: 500 }
+      )
+    }
+
+    const { data: authData } = await supabase.auth.getUser()
+    if (!authData?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+    }
+
+    const { error } = await supabase
+      .from("user_keys")
+      .update({
+        use_for_chat: useForChat,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("user_id", authData.user.id)
+      .eq("provider", provider)
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 })
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: useForChat
+        ? "Your API key will now be used for chat"
+        : "Platform API key will be used for chat",
+    })
+  } catch (error) {
+    console.error("Error in PATCH /api/user-keys:", error)
     return NextResponse.json(
       { error: "Internal server error" },
       { status: 500 }

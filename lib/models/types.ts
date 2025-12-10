@@ -40,6 +40,7 @@ type ModelConfig = {
   ) => LanguageModelV2 | Promise<LanguageModelV2 | undefined>
 
   accessible?: boolean // true if the model is accessible to the user
+  isPro?: boolean // true if model requires subscription or BYOK to use
 }
 
 export type { ModelConfig }

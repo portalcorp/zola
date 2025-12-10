@@ -20,6 +20,7 @@ import { createClient } from "@/lib/supabase/client"
 import { useUser } from "@/lib/user-store/provider"
 import { useMutation } from "@tanstack/react-query"
 import Image from "next/image"
+import Link from "next/link"
 
 type ProModelDialogProps = {
   isOpen: boolean
@@ -33,6 +34,7 @@ export function ProModelDialog({
   currentModel,
 }: ProModelDialogProps) {
   const { user } = useUser()
+  const isAuthenticated = !!user?.id
   const isMobile = useBreakpoint(768)
   const mutation = useMutation({
     mutationFn: async () => {
@@ -49,7 +51,7 @@ export function ProModelDialog({
     },
   })
 
-  const renderContent = () => (
+  const renderUnauthenticatedContent = () => (
     <div className="flex max-h-[70vh] flex-col" key={currentModel}>
       <div className="relative">
         <Image
@@ -62,43 +64,87 @@ export function ProModelDialog({
       </div>
 
       <div className="px-6 pt-4 text-center text-lg leading-tight font-medium">
-        This model is locked
+        Sign in to access this model
       </div>
 
       <div className="flex-grow overflow-y-auto">
         <div className="px-6 py-4">
           <p className="text-muted-foreground">
-            To use it, connect your own API key. Zola supports BYOK via{" "}
-            <span className="text-primary inline-flex font-medium">
-              OpenRouter
-            </span>
-            .
+            Create a free account to unlock access to more AI models, including
+            this one.
           </p>
-          <p className="text-muted-foreground mt-1">
-            Go to{" "}
-            <span className="text-primary inline-flex font-medium">
-              Settings → API Keys
-            </span>{" "}
-            to add your key securely.
+
+          <div className="mt-5 flex justify-center">
+            <Button asChild className="w-full" size="sm">
+              <Link href="/auth/login">Sign in</Link>
+            </Button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+
+  const renderAuthenticatedContent = () => (
+    <div className="flex max-h-[70vh] flex-col" key={currentModel}>
+      <div className="relative">
+        <Image
+          src="/banner_ocean.jpg"
+          alt={`calm paint generate by ${APP_NAME}`}
+          width={400}
+          height={128}
+          className="h-32 w-full object-cover"
+        />
+      </div>
+
+      <div className="px-6 pt-4 text-center text-lg leading-tight font-medium">
+        This is a PRO model
+      </div>
+
+      <div className="flex-grow overflow-y-auto">
+        <div className="px-6 py-4">
+          <p className="text-muted-foreground">
+            PRO models require a subscription or your own API key to use.
           </p>
-          <p className="text-muted-foreground mt-5">
-            We don&apos;t support this model yet?
+
+          <div className="mt-4 space-y-3">
+            <div className="rounded-lg border p-3">
+              <p className="text-sm font-medium">Option 1: Subscribe to PRO</p>
+              <p className="text-muted-foreground mt-1 text-xs">
+                Get unlimited access to all PRO models with a subscription.
+              </p>
+            </div>
+
+            <div className="rounded-lg border p-3">
+              <p className="text-sm font-medium">Option 2: Bring Your Own Key</p>
+              <p className="text-muted-foreground mt-1 text-xs">
+                Go to{" "}
+                <span className="text-primary font-medium">
+                  Settings → API Keys
+                </span>{" "}
+                to add your own API key and enable &quot;Use for chat&quot;.
+              </p>
+            </div>
+          </div>
+
+          <p className="text-muted-foreground mt-5 text-sm">
+            Have questions about PRO?
           </p>
           {mutation.isSuccess ? (
-            <div className="mt-5 flex justify-center gap-3">
+            <div className="mt-3 flex justify-center gap-3">
               <Badge className="bg-green-600 text-white">
                 Thanks! We&apos;ll keep you updated
               </Badge>
             </div>
           ) : (
-            <div className="mt-5 flex justify-center gap-3">
+            <div className="mt-3 flex justify-center gap-3">
               <Button
                 className="w-full"
                 onClick={() => mutation.mutate()}
                 size="sm"
+                variant="outline"
                 disabled={mutation.isPending}
               >
-                {mutation.isPending ? "Sending..." : "Ask for access"}
+                {mutation.isPending ? "Sending..." : "Contact us"}
               </Button>
             </div>
           )}
@@ -106,6 +152,9 @@ export function ProModelDialog({
       </div>
     </div>
   )
+
+  const renderContent = () =>
+    isAuthenticated ? renderAuthenticatedContent() : renderUnauthenticatedContent()
 
   if (isMobile) {
     return (

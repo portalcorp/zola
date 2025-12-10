@@ -20,9 +20,10 @@ import {
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Switch } from "@/components/ui/switch"
 import { toast } from "@/components/ui/toast"
 import { fetchClient } from "@/lib/fetch"
-import { useModel } from "@/lib/model-store/provider"
+import { getProviderKeyInfo, useModel } from "@/lib/model-store/provider"
 import { cn } from "@/lib/utils"
 import { KeyIcon, PlusIcon } from "@phosphor-icons/react"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
@@ -201,6 +202,43 @@ export function ByokSection() {
     },
   })
 
+  const toggleUseForChatMutation = useMutation({
+    mutationFn: async ({
+      provider,
+      useForChat,
+    }: {
+      provider: string
+      useForChat: boolean
+    }) => {
+      const res = await fetchClient("/api/user-keys", {
+        method: "PATCH",
+        body: JSON.stringify({
+          provider,
+          useForChat,
+        }),
+      })
+      if (!res.ok) throw new Error("Failed to update setting")
+      return res.json()
+    },
+    onSuccess: async (response, { provider, useForChat }) => {
+      const providerConfig = PROVIDERS.find((p) => p.id === provider)
+      toast({
+        title: useForChat ? "Using your API key" : "Using platform key",
+        description: useForChat
+          ? `Your ${providerConfig?.name} API key will now be used for chat.`
+          : `The platform's ${providerConfig?.name} API key will be used for chat.`,
+      })
+      await refreshAll()
+    },
+    onError: (_, { provider }) => {
+      const providerConfig = PROVIDERS.find((p) => p.id === provider)
+      toast({
+        title: "Failed to update setting",
+        description: `Failed to update ${providerConfig?.name} setting. Please try again.`,
+      })
+    },
+  })
+
   const handleConfirmDelete = () => {
     if (providerToDelete) {
       deleteMutation.mutate(providerToDelete)
@@ -226,7 +264,8 @@ export function ByokSection() {
         </span>
       </h3>
       <p className="text-muted-foreground text-sm">
-        Add your own API keys to unlock access to models.
+        Add your own API keys and optionally use them for chat instead of the
+        platform&apos;s keys.
       </p>
       <p className="text-muted-foreground text-sm">
         Your keys are stored securely with end-to-end encryption.
@@ -327,6 +366,39 @@ export function ByokSection() {
                 </Button>
               </div>
             </div>
+
+            {/* Use for Chat Toggle */}
+            {userKeyStatus[selectedProvider as keyof typeof userKeyStatus] && (
+              <div className="mt-4 flex items-center justify-between rounded-lg border p-3">
+                <div className="flex flex-col gap-0.5">
+                  <Label
+                    htmlFor={`${selectedProvider}-use-for-chat`}
+                    className="text-sm font-medium"
+                  >
+                    Use API key for chat
+                  </Label>
+                  <p className="text-muted-foreground text-xs">
+                    When enabled, your API key will be used instead of the
+                    platform&apos;s key for {selectedProviderConfig.name}{" "}
+                    models.
+                  </p>
+                </div>
+                <Switch
+                  id={`${selectedProvider}-use-for-chat`}
+                  checked={
+                    getProviderKeyInfo(userKeyStatus, selectedProvider)
+                      .useForChat
+                  }
+                  onCheckedChange={(checked) =>
+                    toggleUseForChatMutation.mutate({
+                      provider: selectedProvider,
+                      useForChat: checked,
+                    })
+                  }
+                  disabled={toggleUseForChatMutation.isPending}
+                />
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -338,8 +410,9 @@ export function ByokSection() {
             <AlertDialogDescription>
               Are you sure you want to delete your{" "}
               {PROVIDERS.find((p) => p.id === providerToDelete)?.name} API key?
-              This action cannot be undone and you will lose access to{" "}
-              {PROVIDERS.find((p) => p.id === providerToDelete)?.name} models.
+              This action cannot be undone. The platform&apos;s API key will be
+              used for {PROVIDERS.find((p) => p.id === providerToDelete)?.name}{" "}
+              models.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

@@ -2,6 +2,7 @@ import { useChatDraft } from "@/app/hooks/use-chat-draft"
 import { toast } from "@/components/ui/toast"
 import { getOrCreateGuestUserId } from "@/lib/api"
 import { MESSAGE_MAX_LENGTH, SYSTEM_PROMPT_DEFAULT } from "@/lib/config"
+import { fetchClient } from "@/lib/fetch"
 import { Attachment } from "@/lib/file-handling"
 import { API_ROUTE_CHAT } from "@/lib/routes"
 import type { UserProfile } from "@/lib/user/types"
@@ -83,6 +84,21 @@ export function useChatCore({
       status: "error",
     })
   }, [])
+
+  // Track recent model usage (fire and forget, don't block message sending)
+  const trackRecentModel = useCallback(
+    (modelId: string) => {
+      if (!isAuthenticated) return
+      fetchClient("/api/user-preferences/recent-models", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ model_id: modelId }),
+      }).catch((error) => {
+        console.warn("Failed to track recent model:", error)
+      })
+    },
+    [isAuthenticated]
+  )
 
   // Input state management (no longer provided by useChat in v5)
   const [input, setInput] = useState(draftValue)
@@ -192,15 +208,18 @@ export function useChatCore({
         },
       }
 
-      sendMessage({ text: input }, options)
-      setMessages((prev) => prev.filter((msg) => msg.id !== optimisticId))
-      cleanupOptimisticAttachments(optimisticAttachments)
-      cacheAndAddMessage(optimisticMessage)
-      clearDraft()
+        sendMessage({ text: input }, options)
+        setMessages((prev) => prev.filter((msg) => msg.id !== optimisticId))
+        cleanupOptimisticAttachments(optimisticAttachments)
+        cacheAndAddMessage(optimisticMessage)
+        clearDraft()
 
-      if (messages.length > 0) {
-        bumpChat(currentChatId)
-      }
+        // Track the model as recently used
+        trackRecentModel(selectedModel)
+
+        if (messages.length > 0) {
+          bumpChat(currentChatId)
+        }
     } catch {
       setMessages((prev) => prev.filter((msg) => msg.id !== optimisticId))
       cleanupOptimisticAttachments(optimisticAttachments)
@@ -230,6 +249,7 @@ export function useChatCore({
     messages.length,
     bumpChat,
     setIsSubmitting,
+    trackRecentModel,
   ])
 
   // Handle suggestion
@@ -281,6 +301,9 @@ export function useChatCore({
           options
         )
         setMessages((prev) => prev.filter((msg) => msg.id !== optimisticId))
+
+        // Track the model as recently used
+        trackRecentModel(selectedModel)
       } catch {
         setMessages((prev) => prev.filter((msg) => msg.id !== optimisticId))
         toast({ title: "Failed to send suggestion", status: "error" })
@@ -297,6 +320,7 @@ export function useChatCore({
       isAuthenticated,
       setMessages,
       setIsSubmitting,
+      trackRecentModel,
     ]
   )
 

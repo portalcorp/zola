@@ -5,12 +5,12 @@ import type {
   StoreAssistantMessageParams,
   SupabaseClientType,
 } from "@/app/types/api.types"
-import { FREE_MODELS_IDS, NON_AUTH_ALLOWED_MODELS } from "@/lib/config"
+import { FREE_MODELS_IDS, NON_AUTH_ALLOWED_MODELS, PRO_MODELS_IDS } from "@/lib/config"
 import { getProviderForModel } from "@/lib/openproviders/provider-map"
 import { sanitizeUserInput } from "@/lib/sanitize"
 import { validateUserIdentity } from "@/lib/server/api"
 import { checkUsageByModel, incrementUsage } from "@/lib/usage"
-import { getUserKey, type ProviderWithoutOllama } from "@/lib/user-keys"
+import { getEffectiveApiKey, type ProviderWithoutOllama } from "@/lib/user-keys"
 
 export async function validateAndTrackUsage({
   userId,
@@ -29,19 +29,50 @@ export async function validateAndTrackUsage({
       )
     }
   } else {
-    // For authenticated users, check API key requirements
+    // For authenticated users, check if this is a PRO model
+    const isPro = PRO_MODELS_IDS.includes(model)
+    
+    if (isPro) {
+      // PRO models require either subscription or BYOK
+      // Check if user has premium subscription
+      const { data: userData } = await supabase
+        .from("users")
+        .select("premium")
+        .eq("id", userId)
+        .single()
+      
+      const isPremium = userData?.premium ?? false
+      
+      if (!isPremium) {
+        // Check if user has BYOK enabled for this provider
+        const provider = getProviderForModel(model)
+        if (provider !== "ollama") {
+          const effectiveKey = await getEffectiveApiKey(userId, provider as ProviderWithoutOllama)
+          // For PRO models, we need to check if user specifically has BYOK enabled
+          // getEffectiveApiKey returns platform key if user doesn't have BYOK, so we need
+          // to check if user has their own key with use_for_chat enabled
+          const { getUserKeyData } = await import("@/lib/user-keys")
+          const userKeyData = await getUserKeyData(userId, provider)
+          const hasUserByok = userKeyData && userKeyData.use_for_chat
+          
+          if (!hasUserByok) {
+            throw new Error(
+              `This is a PRO model. Please subscribe to PRO or add your own API key for ${provider} in Settings → API Keys.`
+            )
+          }
+        }
+      }
+    }
+    
+    // For non-PRO models (or if PRO check passed), verify an API key exists
     const provider = getProviderForModel(model)
-
     if (provider !== "ollama") {
-      const userApiKey = await getUserKey(
-        userId,
-        provider as ProviderWithoutOllama
-      )
-
-      // If no API key and model is not in free list, deny access
-      if (!userApiKey && !FREE_MODELS_IDS.includes(model)) {
+      const effectiveKey = await getEffectiveApiKey(userId, provider as ProviderWithoutOllama)
+      
+      // If no API key available (neither user BYOK nor platform .env), deny access
+      if (!effectiveKey) {
         throw new Error(
-          `This model requires an API key for ${provider}. Please add your API key in settings or use a free model.`
+          `No API key available for ${provider}. Please add your API key in Settings → API Keys.`
         )
       }
     }

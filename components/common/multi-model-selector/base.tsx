@@ -105,6 +105,7 @@ export function MultiModelSelector({
 
   const renderModelItem = (model: ModelConfig) => {
     const isLocked = !model.accessible
+    const isPro = model.isPro
     const isSelected = selectedModelIds.includes(model.id)
     const isAtLimit = selectedModelIds.length >= maxModels
     const provider = PROVIDERS.find((provider) => provider.id === model.icon)
@@ -131,7 +132,18 @@ export function MultiModelSelector({
           </div>
         </div>
         <div className="flex items-center gap-2">
-          {isLocked && (
+          {isPro && (
+            <div className={cn(
+              "flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[10px] font-medium",
+              isLocked
+                ? "border-input bg-accent text-muted-foreground border"
+                : "bg-primary/10 text-primary"
+            )}>
+              <StarIcon className="size-2" weight={isLocked ? "regular" : "fill"} />
+              <span>PRO</span>
+            </div>
+          )}
+          {isLocked && !isPro && (
             <div className="border-input bg-accent text-muted-foreground flex items-center gap-0.5 rounded-full border px-1.5 py-0.5 text-[10px] font-medium">
               <StarIcon className="size-2" />
               <span>Locked</span>
@@ -450,6 +462,7 @@ export function MultiModelSelector({
               ) : filteredModels.length > 0 ? (
                 filteredModels.map((model) => {
                   const isLocked = !model.accessible
+                  const isPro = model.isPro
                   const isSelected = selectedModelIds.includes(model.id)
                   const provider = PROVIDERS.find(
                     (provider) => provider.id === model.icon
@@ -485,7 +498,18 @@ export function MultiModelSelector({
                       </div>
                       <div className="flex items-center gap-2">
                         {isSelected && <CheckIcon className="size-4" />}
-                        {isLocked && (
+                        {isPro && (
+                          <div className={cn(
+                            "flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[10px] font-medium",
+                            isLocked
+                              ? "border-input bg-accent text-muted-foreground border"
+                              : "bg-primary/10 text-primary"
+                          )}>
+                            <StarIcon className="size-2" weight={isLocked ? "regular" : "fill"} />
+                            <span>PRO</span>
+                          </div>
+                        )}
+                        {isLocked && !isPro && (
                           <div className="border-input bg-accent text-muted-foreground flex items-center gap-0.5 rounded-full border px-1.5 py-0.5 text-[10px] font-medium">
                             <span>Locked</span>
                           </div>

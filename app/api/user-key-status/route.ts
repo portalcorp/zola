@@ -4,6 +4,11 @@ import { NextResponse } from "next/server"
 
 const SUPPORTED_PROVIDERS = PROVIDERS.map((p) => p.id)
 
+export type ProviderKeyStatus = {
+  hasKey: boolean
+  useForChat: boolean
+}
+
 export async function GET() {
   try {
     const supabase = await createClient()
@@ -22,21 +27,31 @@ export async function GET() {
 
     const { data, error } = await supabase
       .from("user_keys")
-      .select("provider")
+      .select("provider, use_for_chat")
       .eq("user_id", authData.user.id)
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 })
     }
 
+    // Create a map of provider -> { hasKey, useForChat }
+    const userKeyMap = new Map(
+      data?.map((k) => [k.provider, k.use_for_chat ?? false]) || []
+    )
+
     // Create status object for all supported providers
-    const userProviders = data?.map((k) => k.provider) || []
+    // For backwards compatibility, also include the boolean value at the top level
     const providerStatus = SUPPORTED_PROVIDERS.reduce(
       (acc, provider) => {
-        acc[provider] = userProviders.includes(provider)
+        const hasKey = userKeyMap.has(provider)
+        acc[provider] = hasKey // Keep backwards compatibility
+        acc[`${provider}_status`] = {
+          hasKey,
+          useForChat: hasKey ? (userKeyMap.get(provider) ?? false) : false,
+        }
         return acc
       },
-      {} as Record<string, boolean>
+      {} as Record<string, boolean | ProviderKeyStatus>
     )
 
     return NextResponse.json(providerStatus)

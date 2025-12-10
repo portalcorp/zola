@@ -14,21 +14,39 @@ export const REMAINING_QUERY_ALERT_THRESHOLD = 2
 export const DAILY_FILE_UPLOAD_LIMIT = 5
 export const DAILY_LIMIT_PRO_MODELS = 500
 
-export const NON_AUTH_ALLOWED_MODELS = ["gpt-4.1-nano"]
+export const NON_AUTH_ALLOWED_MODELS = ["gpt-4.1-mini"]
 
 export const FREE_MODELS_IDS = [
   "openrouter:deepseek/deepseek-r1:free",
   "openrouter:meta-llama/llama-3.3-8b-instruct:free",
   "pixtral-large-latest",
   "mistral-large-latest",
-  "gpt-4.1-nano",
+  "gpt-4.1-mini",
 ]
 
-// export const RECOMMENDED_MODELS_IDS = [
-//   "
-// ]
+// Recommended models shown to new users - curated for quality and accessibility
+export const RECOMMENDED_MODELS_IDS = [
+  "gpt-4.1-mini", // Fast and capable - OpenAI
+  "claude-sonnet-4-5",
+  "gemini-2.5-flash",
+  "claude-opus-4-5-20251101"
+]
 
-export const MODEL_DEFAULT = "gpt-4.1-nano"
+// PRO tier models - require subscription or user's own API key (BYOK)
+// These are the flagship/premium models from each provider
+export const PRO_MODELS_IDS = [
+  // OpenAI flagship
+  "gpt-5", // Full GPT-4.1
+  "o1", // Full O1 reasoning
+  "o1-pro", // O1 Pro
+  "o3", // Full O3 reasoning
+  // Anthropic flagship
+  "claude-opus-4-5-20251101",
+  // Google flagship
+  "gemini-3.0-pro-preview",
+]
+
+export const MODEL_DEFAULT = "gpt-4.1-mini"
 
 export const APP_NAME = "Zola"
 export const APP_DOMAIN = "https://zola.chat"

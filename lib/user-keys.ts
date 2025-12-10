@@ -6,39 +6,69 @@ import { createClient } from "./supabase/server"
 export type { Provider } from "./openproviders/types"
 export type ProviderWithoutOllama = Exclude<Provider, "ollama">
 
-export async function getUserKey(
+type UserKeyData = {
+  encrypted_key: string
+  iv: string
+  use_for_chat: boolean | null
+}
+
+export async function getUserKeyData(
   userId: string,
   provider: Provider
-): Promise<string | null> {
+): Promise<UserKeyData | null> {
   try {
     const supabase = await createClient()
     if (!supabase) return null
 
     const { data, error } = await supabase
       .from("user_keys")
-      .select("encrypted_key, iv")
+      .select("encrypted_key, iv, use_for_chat")
       .eq("user_id", userId)
       .eq("provider", provider)
       .single()
 
     if (error || !data) return null
 
-    return decryptKey(data.encrypted_key, data.iv)
+    return data as UserKeyData
   } catch (error) {
     console.error("Error retrieving user key:", error)
     return null
   }
 }
 
+export async function getUserKey(
+  userId: string,
+  provider: Provider
+): Promise<string | null> {
+  const keyData = await getUserKeyData(userId, provider)
+  if (!keyData) return null
+  return decryptKey(keyData.encrypted_key, keyData.iv)
+}
+
+/**
+ * Get the effective API key to use for a provider.
+ * 
+ * Logic:
+ * 1. If user has a key AND has enabled "use_for_chat" for this provider -> use user's key
+ * 2. Otherwise -> use platform's .env key
+ * 
+ * This allows users to store their API keys for backup/reference without
+ * necessarily using them for every chat.
+ */
 export async function getEffectiveApiKey(
   userId: string | null,
   provider: ProviderWithoutOllama
 ): Promise<string | null> {
+  // Check if user has a key and wants to use it
   if (userId) {
-    const userKey = await getUserKey(userId, provider)
-    if (userKey) return userKey
+    const keyData = await getUserKeyData(userId, provider)
+    if (keyData && keyData.use_for_chat) {
+      // User has a key and has enabled "use for chat"
+      return decryptKey(keyData.encrypted_key, keyData.iv)
+    }
   }
 
+  // Use platform's .env key (default behavior)
   // Try to get API key from environment dynamically
   // First check if it's a known provider with a specific env var
   const knownProviderKeys: Record<string, string | undefined> = {

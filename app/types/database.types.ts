@@ -278,6 +278,7 @@ export type Database = {
           provider: string
           encrypted_key: string
           iv: string
+          use_for_chat: boolean | null
           created_at: string | null
           updated_at: string | null
         }
@@ -286,6 +287,7 @@ export type Database = {
           provider: string
           encrypted_key: string
           iv: string
+          use_for_chat?: boolean | null
           created_at?: string | null
           updated_at?: string | null
         }
@@ -294,6 +296,7 @@ export type Database = {
           provider?: string
           encrypted_key?: string
           iv?: string
+          use_for_chat?: boolean | null
           created_at?: string | null
           updated_at?: string | null
         }

@@ -1,4 +1,3 @@
-import { MODEL_DEFAULT } from "@/lib/config"
 import { isSupabaseEnabled } from "@/lib/supabase/config"
 import { createClient } from "@/lib/supabase/server"
 import { createGuestServerClient } from "@/lib/supabase/server-guest"
@@ -54,7 +53,7 @@ export async function GET(request: Request) {
       created_at: new Date().toISOString(),
       message_count: 0,
       premium: false,
-      favorite_models: [MODEL_DEFAULT],
+      favorite_models: [],
     })
 
     if (insertError && insertError.code !== "23505") {

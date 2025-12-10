@@ -10,6 +10,11 @@ import {
   useState,
 } from "react"
 
+type ProviderKeyInfo = {
+  hasKey: boolean
+  useForChat: boolean
+}
+
 type UserKeyStatus = {
   openrouter: boolean
   openai: boolean
@@ -18,18 +23,38 @@ type UserKeyStatus = {
   perplexity: boolean
   xai: boolean
   anthropic: boolean
-  [key: string]: boolean // Allow for additional providers
+  [key: string]: boolean | ProviderKeyInfo // Allow for additional providers and status objects
+}
+
+// Helper to get provider status info
+export function getProviderKeyInfo(
+  userKeyStatus: UserKeyStatus,
+  providerId: string
+): ProviderKeyInfo {
+  const statusKey = `${providerId}_status`
+  const statusObj = userKeyStatus[statusKey]
+  if (statusObj && typeof statusObj === "object" && "hasKey" in statusObj) {
+    return statusObj as ProviderKeyInfo
+  }
+  // Fallback for backwards compatibility
+  return {
+    hasKey: !!userKeyStatus[providerId],
+    useForChat: false,
+  }
 }
 
 type ModelContextType = {
   models: ModelConfig[]
   userKeyStatus: UserKeyStatus
   favoriteModels: string[]
+  recentModels: string[]
   isLoading: boolean
   refreshModels: () => Promise<void>
   refreshUserKeyStatus: () => Promise<void>
   refreshFavoriteModels: () => Promise<void>
   refreshFavoriteModelsSilent: () => Promise<void>
+  refreshRecentModels: () => Promise<void>
+  refreshRecentModelsSilent: () => Promise<void>
   refreshAll: () => Promise<void>
 }
 
@@ -47,6 +72,7 @@ export function ModelProvider({ children }: { children: React.ReactNode }) {
     anthropic: false,
   })
   const [favoriteModels, setFavoriteModels] = useState<string[]>([])
+  const [recentModels, setRecentModels] = useState<string[]>([])
   const [isLoading, setIsLoading] = useState(true)
 
   const fetchModels = useCallback(async () => {
@@ -98,6 +124,21 @@ export function ModelProvider({ children }: { children: React.ReactNode }) {
     }
   }, [])
 
+  const fetchRecentModels = useCallback(async () => {
+    try {
+      const response = await fetchClient(
+        "/api/user-preferences/recent-models"
+      )
+      if (response.ok) {
+        const data = await response.json()
+        setRecentModels(data.recent_models || [])
+      }
+    } catch (error) {
+      console.error("Failed to fetch recent models:", error)
+      setRecentModels([])
+    }
+  }, [])
+
   const refreshModels = useCallback(async () => {
     setIsLoading(true)
     try {
@@ -136,6 +177,26 @@ export function ModelProvider({ children }: { children: React.ReactNode }) {
     }
   }, [fetchFavoriteModels])
 
+  const refreshRecentModels = useCallback(async () => {
+    setIsLoading(true)
+    try {
+      await fetchRecentModels()
+    } finally {
+      setIsLoading(false)
+    }
+  }, [fetchRecentModels])
+
+  const refreshRecentModelsSilent = useCallback(async () => {
+    try {
+      await fetchRecentModels()
+    } catch (error) {
+      console.error(
+        "❌ ModelProvider: Failed to silently refresh recent models:",
+        error
+      )
+    }
+  }, [fetchRecentModels])
+
   const refreshAll = useCallback(async () => {
     setIsLoading(true)
     try {
@@ -143,11 +204,12 @@ export function ModelProvider({ children }: { children: React.ReactNode }) {
         fetchModels(),
         fetchUserKeyStatus(),
         fetchFavoriteModels(),
+        fetchRecentModels(),
       ])
     } finally {
       setIsLoading(false)
     }
-  }, [fetchModels, fetchUserKeyStatus, fetchFavoriteModels])
+  }, [fetchModels, fetchUserKeyStatus, fetchFavoriteModels, fetchRecentModels])
 
   // Initial data fetch
   useEffect(() => {
@@ -161,11 +223,14 @@ export function ModelProvider({ children }: { children: React.ReactNode }) {
         models,
         userKeyStatus,
         favoriteModels,
+        recentModels,
         isLoading,
         refreshModels,
         refreshUserKeyStatus,
         refreshFavoriteModels,
         refreshFavoriteModelsSilent,
+        refreshRecentModels,
+        refreshRecentModelsSilent,
         refreshAll,
       }}
     >

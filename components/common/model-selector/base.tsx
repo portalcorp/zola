@@ -1,6 +1,5 @@
 "use client"
 
-import { PopoverContentAuth } from "@/app/components/chat-input/popover-content-auth"
 import { useBreakpoint } from "@/app/hooks/use-breakpoint"
 import { useKeyShortcut } from "@/app/hooks/use-key-shortcut"
 import { Button } from "@/components/ui/button"
@@ -15,24 +14,27 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Input } from "@/components/ui/input"
-import { Popover, PopoverTrigger } from "@/components/ui/popover"
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import { useModel } from "@/lib/model-store/provider"
-import { filterAndSortModels } from "@/lib/model-store/utils"
+import { getModelSections } from "@/lib/model-store/utils"
 import { ModelConfig } from "@/lib/models/types"
 import { PROVIDERS } from "@/lib/providers"
 import { useUserPreferences } from "@/lib/user-preference-store/provider"
 import { cn } from "@/lib/utils"
 import {
   CaretDownIcon,
+  ClockIcon,
   MagnifyingGlassIcon,
+  SparkleIcon,
   StarIcon,
 } from "@phosphor-icons/react"
 import { useRef, useState } from "react"
@@ -52,7 +54,7 @@ export function ModelSelector({
   className,
   isUserAuthenticated = true,
 }: ModelSelectorProps) {
-  const { models, isLoading: isLoadingModels, favoriteModels } = useModel()
+  const { models, isLoading: isLoadingModels, favoriteModels, recentModels } = useModel()
   const { isModelHidden } = useUserPreferences()
 
   const currentModel = models.find((model) => model.id === selectedModelId)
@@ -84,6 +86,7 @@ export function ModelSelector({
 
   const renderModelItem = (model: ModelConfig) => {
     const isLocked = !model.accessible
+    const isPro = model.isPro
     const provider = PROVIDERS.find((provider) => provider.id === model.icon)
 
     return (
@@ -114,12 +117,25 @@ export function ModelSelector({
             <span className="text-sm">{model.name}</span>
           </div>
         </div>
-        {isLocked && (
-          <div className="border-input bg-accent text-muted-foreground flex items-center gap-0.5 rounded-full border px-1.5 py-0.5 text-[10px] font-medium">
-            <StarIcon className="size-2" />
-            <span>Locked</span>
-          </div>
-        )}
+        <div className="flex items-center gap-1.5">
+          {isPro && (
+            <div className={cn(
+              "flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[10px] font-medium",
+              isLocked
+                ? "border-input bg-accent text-muted-foreground border"
+                : "bg-primary/10 text-primary"
+            )}>
+              <StarIcon className="size-2" weight={isLocked ? "regular" : "fill"} />
+              <span>PRO</span>
+            </div>
+          )}
+          {isLocked && !isPro && (
+            <div className="border-input bg-accent text-muted-foreground flex items-center gap-0.5 rounded-full border px-1.5 py-0.5 text-[10px] font-medium">
+              <StarIcon className="size-2" />
+              <span>Locked</span>
+            </div>
+          )}
+        </div>
       </div>
     )
   }
@@ -127,12 +143,17 @@ export function ModelSelector({
   // Get the hovered model data
   const hoveredModelData = models.find((model) => model.id === hoveredModel)
 
-  const filteredModels = filterAndSortModels(
+  // Get models organized by sections
+  const { favorites, recent, recommended } = getModelSections(
     models,
     favoriteModels || [],
+    recentModels || [],
     searchQuery,
     isModelHidden
   )
+
+  // Check if we have any models to show
+  const hasAnyModels = favorites.length > 0 || recent.length > 0 || recommended.length > 0
 
   const trigger = (
     <Button
@@ -154,36 +175,8 @@ export function ModelSelector({
     setSearchQuery(e.target.value)
   }
 
-  // If user is not authenticated, show the auth popover
-  if (!isUserAuthenticated) {
-    return (
-      <Popover>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <PopoverTrigger asChild>
-              <Button
-                size="sm"
-                variant="secondary"
-                className={cn(
-                  "border-border dark:bg-secondary text-accent-foreground h-9 w-auto border bg-transparent",
-                  className
-                )}
-                type="button"
-              >
-                {currentProvider?.icon && (
-                  <currentProvider.icon className="size-5" />
-                )}
-                {currentModel?.name}
-                <CaretDownIcon className="size-4" />
-              </Button>
-            </PopoverTrigger>
-          </TooltipTrigger>
-          <TooltipContent>Select a model</TooltipContent>
-        </Tooltip>
-        <PopoverContentAuth />
-      </Popover>
-    )
-  }
+  // For unauthenticated users, locked models require login
+  // The `accessible` flag from the API already marks non-free models as locked
 
   if (isMobile) {
     return (
@@ -219,8 +212,39 @@ export function ModelSelector({
                     Loading models...
                   </p>
                 </div>
-              ) : filteredModels.length > 0 ? (
-                filteredModels.map((model) => renderModelItem(model))
+              ) : hasAnyModels ? (
+                <>
+                  {/* Favorites Section */}
+                  {favorites.length > 0 && (
+                    <div className="mb-2">
+                      <div className="text-muted-foreground flex items-center gap-1.5 px-3 py-2 text-xs font-medium">
+                        <StarIcon className="size-3" weight="fill" />
+                        Favorites
+                      </div>
+                      {favorites.map((model) => renderModelItem(model))}
+                    </div>
+                  )}
+                  {/* Recent Section */}
+                  {recent.length > 0 && (
+                    <div className="mb-2">
+                      <div className="text-muted-foreground flex items-center gap-1.5 px-3 py-2 text-xs font-medium">
+                        <ClockIcon className="size-3" />
+                        Recent
+                      </div>
+                      {recent.map((model) => renderModelItem(model))}
+                    </div>
+                  )}
+                  {/* Recommended Section */}
+                  {recommended.length > 0 && (
+                    <div className="mb-2">
+                      <div className="text-muted-foreground flex items-center gap-1.5 px-3 py-2 text-xs font-medium">
+                        <SparkleIcon className="size-3" />
+                        Recommended
+                      </div>
+                      {recommended.map((model) => renderModelItem(model))}
+                    </div>
+                  )}
+                </>
               ) : (
                 <div className="flex h-full flex-col items-center justify-center p-6 text-center">
                   <p className="text-muted-foreground mb-2 text-sm">
@@ -296,55 +320,202 @@ export function ModelSelector({
                     Loading models...
                   </p>
                 </div>
-              ) : filteredModels.length > 0 ? (
-                filteredModels.map((model) => {
-                  const isLocked = !model.accessible
-                  const provider = PROVIDERS.find(
-                    (provider) => provider.id === model.icon
-                  )
-
-                  return (
-                    <DropdownMenuItem
-                      key={model.id}
-                      className={cn(
-                        "flex w-full items-center justify-between px-3 py-2",
-                        selectedModelId === model.id && "bg-accent"
+              ) : hasAnyModels ? (
+                <>
+                  {/* Favorites Section */}
+                  {favorites.length > 0 && (
+                    <>
+                      <DropdownMenuLabel className="text-muted-foreground flex items-center gap-1.5 text-xs font-medium">
+                        <StarIcon className="size-3" weight="fill" />
+                        Favorites
+                      </DropdownMenuLabel>
+                      {favorites.map((model) => {
+                        const isLocked = !model.accessible
+                        const isPro = model.isPro
+                        const provider = PROVIDERS.find(
+                          (provider) => provider.id === model.icon
+                        )
+                        return (
+                          <DropdownMenuItem
+                            key={model.id}
+                            className={cn(
+                              "flex w-full items-center justify-between px-3 py-2",
+                              selectedModelId === model.id && "bg-accent"
+                            )}
+                            onSelect={() => {
+                              if (isLocked) {
+                                setSelectedProModel(model.id)
+                                setIsProDialogOpen(true)
+                                return
+                              }
+                              setSelectedModelId(model.id)
+                              setIsDropdownOpen(false)
+                            }}
+                            onFocus={() => {
+                              if (isDropdownOpen) setHoveredModel(model.id)
+                            }}
+                            onMouseEnter={() => {
+                              if (isDropdownOpen) setHoveredModel(model.id)
+                            }}
+                          >
+                            <div className="flex items-center gap-3">
+                              {provider?.icon && <provider.icon className="size-5" />}
+                              <span className="text-sm">{model.name}</span>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                              {isPro && (
+                                <div className={cn(
+                                  "flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[10px] font-medium",
+                                  isLocked
+                                    ? "border-input bg-accent text-muted-foreground border"
+                                    : "bg-primary/10 text-primary"
+                                )}>
+                                  <StarIcon className="size-2" weight={isLocked ? "regular" : "fill"} />
+                                  <span>PRO</span>
+                                </div>
+                              )}
+                              {isLocked && !isPro && (
+                                <div className="border-input bg-accent text-muted-foreground flex items-center gap-0.5 rounded-full border px-1.5 py-0.5 text-[10px] font-medium">
+                                  <span>Locked</span>
+                                </div>
+                              )}
+                            </div>
+                          </DropdownMenuItem>
+                        )
+                      })}
+                      {(recent.length > 0 || recommended.length > 0) && (
+                        <DropdownMenuSeparator />
                       )}
-                      onSelect={() => {
-                        if (isLocked) {
-                          setSelectedProModel(model.id)
-                          setIsProDialogOpen(true)
-                          return
-                        }
-
-                        setSelectedModelId(model.id)
-                        setIsDropdownOpen(false)
-                      }}
-                      onFocus={() => {
-                        if (isDropdownOpen) {
-                          setHoveredModel(model.id)
-                        }
-                      }}
-                      onMouseEnter={() => {
-                        if (isDropdownOpen) {
-                          setHoveredModel(model.id)
-                        }
-                      }}
-                    >
-                      <div className="flex items-center gap-3">
-                        {provider?.icon && <provider.icon className="size-5" />}
-                        <div className="flex flex-col gap-0">
-                          <span className="text-sm">{model.name}</span>
-                        </div>
-                      </div>
-                      {isLocked && (
-                        <div className="border-input bg-accent text-muted-foreground flex items-center gap-0.5 rounded-full border px-1.5 py-0.5 text-[10px] font-medium">
-                          <span>Locked</span>
-                        </div>
-                      )}
-                    </DropdownMenuItem>
-                  )
-                })
+                    </>
+                  )}
+                  {/* Recent Section */}
+                  {recent.length > 0 && (
+                    <>
+                      <DropdownMenuLabel className="text-muted-foreground flex items-center gap-1.5 text-xs font-medium">
+                        <ClockIcon className="size-3" />
+                        Recent
+                      </DropdownMenuLabel>
+                      {recent.map((model) => {
+                        const isLocked = !model.accessible
+                        const isPro = model.isPro
+                        const provider = PROVIDERS.find(
+                          (provider) => provider.id === model.icon
+                        )
+                        return (
+                          <DropdownMenuItem
+                            key={model.id}
+                            className={cn(
+                              "flex w-full items-center justify-between px-3 py-2",
+                              selectedModelId === model.id && "bg-accent"
+                            )}
+                            onSelect={() => {
+                              if (isLocked) {
+                                setSelectedProModel(model.id)
+                                setIsProDialogOpen(true)
+                                return
+                              }
+                              setSelectedModelId(model.id)
+                              setIsDropdownOpen(false)
+                            }}
+                            onFocus={() => {
+                              if (isDropdownOpen) setHoveredModel(model.id)
+                            }}
+                            onMouseEnter={() => {
+                              if (isDropdownOpen) setHoveredModel(model.id)
+                            }}
+                          >
+                            <div className="flex items-center gap-3">
+                              {provider?.icon && <provider.icon className="size-5" />}
+                              <span className="text-sm">{model.name}</span>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                              {isPro && (
+                                <div className={cn(
+                                  "flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[10px] font-medium",
+                                  isLocked
+                                    ? "border-input bg-accent text-muted-foreground border"
+                                    : "bg-primary/10 text-primary"
+                                )}>
+                                  <StarIcon className="size-2" weight={isLocked ? "regular" : "fill"} />
+                                  <span>PRO</span>
+                                </div>
+                              )}
+                              {isLocked && !isPro && (
+                                <div className="border-input bg-accent text-muted-foreground flex items-center gap-0.5 rounded-full border px-1.5 py-0.5 text-[10px] font-medium">
+                                  <span>Locked</span>
+                                </div>
+                              )}
+                            </div>
+                          </DropdownMenuItem>
+                        )
+                      })}
+                      {recommended.length > 0 && <DropdownMenuSeparator />}
+                    </>
+                  )}
+                  {/* Recommended Section */}
+                  {recommended.length > 0 && (
+                    <>
+                      <DropdownMenuLabel className="text-muted-foreground flex items-center gap-1.5 text-xs font-medium">
+                        <SparkleIcon className="size-3" />
+                        Recommended
+                      </DropdownMenuLabel>
+                      {recommended.map((model) => {
+                        const isLocked = !model.accessible
+                        const isPro = model.isPro
+                        const provider = PROVIDERS.find(
+                          (provider) => provider.id === model.icon
+                        )
+                        return (
+                          <DropdownMenuItem
+                            key={model.id}
+                            className={cn(
+                              "flex w-full items-center justify-between px-3 py-2",
+                              selectedModelId === model.id && "bg-accent"
+                            )}
+                            onSelect={() => {
+                              if (isLocked) {
+                                setSelectedProModel(model.id)
+                                setIsProDialogOpen(true)
+                                return
+                              }
+                              setSelectedModelId(model.id)
+                              setIsDropdownOpen(false)
+                            }}
+                            onFocus={() => {
+                              if (isDropdownOpen) setHoveredModel(model.id)
+                            }}
+                            onMouseEnter={() => {
+                              if (isDropdownOpen) setHoveredModel(model.id)
+                            }}
+                          >
+                            <div className="flex items-center gap-3">
+                              {provider?.icon && <provider.icon className="size-5" />}
+                              <span className="text-sm">{model.name}</span>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                              {isPro && (
+                                <div className={cn(
+                                  "flex items-center gap-0.5 rounded-full px-1.5 py-0.5 text-[10px] font-medium",
+                                  isLocked
+                                    ? "border-input bg-accent text-muted-foreground border"
+                                    : "bg-primary/10 text-primary"
+                                )}>
+                                  <StarIcon className="size-2" weight={isLocked ? "regular" : "fill"} />
+                                  <span>PRO</span>
+                                </div>
+                              )}
+                              {isLocked && !isPro && (
+                                <div className="border-input bg-accent text-muted-foreground flex items-center gap-0.5 rounded-full border px-1.5 py-0.5 text-[10px] font-medium">
+                                  <span>Locked</span>
+                                </div>
+                              )}
+                            </div>
+                          </DropdownMenuItem>
+                        )
+                      })}
+                    </>
+                  )}
+                </>
               ) : (
                 <div className="flex h-full flex-col items-center justify-center p-6 text-center">
                   <p className="text-muted-foreground mb-1 text-sm">
